@@ -492,6 +492,28 @@ body::before {
 .empty h3 { font-family: 'DM Serif Display', serif; font-size: 1.1rem; margin-bottom: 0.3rem; }
 .empty p { color: var(--text-muted); font-size: 0.88rem; }
 
+/* ═══ ANALYTICS ═══ */
+.modal-wide { max-width: 560px; }
+.analytics-period { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
+.analytics-period .btn.active { background: var(--navy); color: #fff; }
+.analytics-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
+.analytics-chart-wrap { background: var(--bg); border-radius: 10px; padding: 0.75rem; margin-bottom: 1.25rem; }
+.analytics-chart-wrap canvas { width: 100%; display: block; }
+.analytics-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+.analytics-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 0.5rem; }
+.analytics-list { font-size: 0.82rem; }
+.analytics-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
+.analytics-row:last-child { border: none; }
+.analytics-row .label { color: var(--navy); }
+.analytics-row .count { font-weight: 700; color: var(--teal); font-size: 0.78rem; }
+.analytics-row .time { color: var(--text-muted); font-size: 0.73rem; }
+.analytics-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 0.2rem; flex: 1; margin-left: 0.75rem; margin-right: 0.5rem; }
+.analytics-bar-fill { height: 100%; background: var(--teal); border-radius: 2px; }
+@media (max-width: 600px) {
+  .analytics-breakdown { grid-template-columns: 1fr; }
+  .analytics-stats { grid-template-columns: 1fr; }
+}
+
 /* ═══ TOAST ═══ */
 .toast {
   position: fixed; bottom: 1.5rem; right: 1.5rem;
@@ -661,6 +683,44 @@ body::before {
       </div>
       <div class="modal-foot">
         <button class="btn btn-outline" onclick="closeModal('dlOverlay')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ANALYTICS MODAL ═══ -->
+  <div class="overlay" id="analyticsOverlay">
+    <div class="modal modal-wide">
+      <h3 id="analyticsTitle">Scan Analytics</h3>
+      <div class="analytics-period">
+        <button class="btn btn-soft btn-xs active" data-period="7" onclick="setAnalyticsPeriod(7, this)">7 days</button>
+        <button class="btn btn-soft btn-xs" data-period="30" onclick="setAnalyticsPeriod(30, this)">30 days</button>
+        <button class="btn btn-soft btn-xs" data-period="90" onclick="setAnalyticsPeriod(90, this)">90 days</button>
+        <button class="btn btn-soft btn-xs" data-period="0" onclick="setAnalyticsPeriod(0, this)">All time</button>
+      </div>
+      <div class="analytics-stats" id="analyticsStats">
+        <div class="stat"><div class="stat-label">Total Scans</div><div class="stat-val" id="aTotal">0</div></div>
+        <div class="stat"><div class="stat-label">This Period</div><div class="stat-val" id="aPeriod">0</div></div>
+        <div class="stat"><div class="stat-label">Peak Day</div><div class="stat-val" id="aPeak">—</div></div>
+      </div>
+      <div class="analytics-chart-wrap">
+        <canvas id="analyticsChart" height="160"></canvas>
+      </div>
+      <div class="analytics-breakdown">
+        <div class="analytics-col">
+          <div class="analytics-section-title">Top Devices</div>
+          <div id="aDevices" class="analytics-list"></div>
+        </div>
+        <div class="analytics-col">
+          <div class="analytics-section-title">Top Browsers</div>
+          <div id="aBrowsers" class="analytics-list"></div>
+        </div>
+      </div>
+      <div class="analytics-recent">
+        <div class="analytics-section-title">Recent Scans</div>
+        <div id="aRecent" class="analytics-list"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" onclick="closeModal('analyticsOverlay')">Close</button>
       </div>
     </div>
   </div>
@@ -904,12 +964,13 @@ function render() {
         </div>
         ${hasRules ? `<div class="rules-preview">${c.rules.map(r => `<div class="rule-row"><span class="rule-when">${fmtWhen(r)}</span><span class="rule-dest">&#8594; ${esc(r.url)}</span></div>`).join('')}<div class="rule-row" style="border:none"><span class="rule-when" style="color:var(--text-muted)">Otherwise</span><span class="rule-dest">&#8594; ${esc(c.url)}</span></div></div>` : ''}
         <div class="card-meta">
-          <span class="scans">${c.scans || 0} scans</span>
+          <span class="scans" style="cursor:pointer" onclick="openAnalytics('${c.id}')">${c.scans || 0} scans</span>
           ${hasRules ? `<span class="card-rules-badge">&#9881; ${c.rules.length} rule${c.rules.length > 1 ? 's' : ''}</span>` : ''}
           <span>Updated ${timeAgo(c.updated_at)}</span>
         </div>
         <div class="card-actions">
           <button class="btn btn-soft btn-xs" onclick="openEdit('${c.id}')">Edit</button>
+          <button class="btn btn-outline btn-xs" onclick="openAnalytics('${c.id}')">Analytics</button>
           <button class="btn btn-outline btn-xs" onclick="openDL('${c.id}')">Download QR</button>
           <button class="btn btn-outline btn-xs" onclick="shareLink('${c.slug}')">Share</button>
           <button class="btn btn-danger-ghost btn-xs" onclick="deleteLink('${c.id}')">Delete</button>
@@ -1125,14 +1186,190 @@ function dlQR(fmt) {
   toast('Downloaded!', true);
 }
 
+// ─── Analytics ───
+let analyticsLinkId = null;
+let analyticsPeriod = 7;
+let scanLogsCache = [];
+
+async function openAnalytics(id) {
+  analyticsLinkId = id;
+  analyticsPeriod = 7;
+  const c = myLinks.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('analyticsTitle').textContent = 'Analytics — ' + c.label;
+  document.querySelectorAll('.analytics-period .btn').forEach(b => b.classList.toggle('active', b.dataset.period === '7'));
+  openModal('analyticsOverlay');
+
+  // Fetch scan logs
+  const token = currentSession?.access_token;
+  const headers = { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + (token || SUPABASE_ANON) };
+  const res = await fetch(SUPABASE_URL + '/rest/v1/scan_logs?link_id=eq.' + id + '&order=scanned_at.desc&limit=5000', { headers });
+  if (!res.ok) { toast('Failed to load analytics'); return; }
+  scanLogsCache = await res.json();
+  renderAnalytics();
+}
+
+function setAnalyticsPeriod(days, btn) {
+  analyticsPeriod = days;
+  document.querySelectorAll('.analytics-period .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAnalytics();
+}
+
+function renderAnalytics() {
+  const now = new Date();
+  const logs = analyticsPeriod === 0 ? scanLogsCache :
+    scanLogsCache.filter(l => (now - new Date(l.scanned_at)) < analyticsPeriod * 86400000);
+
+  // Stats
+  document.getElementById('aTotal').textContent = scanLogsCache.length;
+  document.getElementById('aPeriod').textContent = logs.length;
+
+  // Group by date
+  const byDate = {};
+  logs.forEach(l => {
+    const d = new Date(l.scanned_at).toISOString().slice(0, 10);
+    byDate[d] = (byDate[d] || 0) + 1;
+  });
+
+  // Peak day
+  let peakDay = '—', peakCount = 0;
+  Object.entries(byDate).forEach(([d, c]) => { if (c > peakCount) { peakCount = c; peakDay = d; } });
+  document.getElementById('aPeak').textContent = peakCount > 0 ? new Date(peakDay + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+
+  // Chart — fill in missing days
+  const days = analyticsPeriod || Math.max(30, Math.ceil((now - new Date(Math.min(...scanLogsCache.map(l => new Date(l.scanned_at))))) / 86400000) + 1);
+  const chartData = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    chartData.push({ date: key, count: byDate[key] || 0 });
+  }
+  drawChart(chartData);
+
+  // Parse user agents
+  const devices = {}, browsers = {};
+  logs.forEach(l => {
+    const ua = l.user_agent || '';
+    const dev = parseDevice(ua);
+    const br = parseBrowser(ua);
+    devices[dev] = (devices[dev] || 0) + 1;
+    browsers[br] = (browsers[br] || 0) + 1;
+  });
+
+  renderBreakdown('aDevices', devices, logs.length);
+  renderBreakdown('aBrowsers', browsers, logs.length);
+
+  // Recent scans
+  const recent = logs.slice(0, 10);
+  document.getElementById('aRecent').innerHTML = recent.length === 0 ? '<div style="color:var(--text-muted);font-size:0.82rem">No scans yet</div>' :
+    recent.map(l => `<div class="analytics-row"><span class="label">${parseBrowser(l.user_agent || '')} · ${parseDevice(l.user_agent || '')}</span><span class="time">${timeAgo(l.scanned_at)}</span></div>`).join('');
+}
+
+function parseDevice(ua) {
+  if (/iPad/i.test(ua)) return 'iPad';
+  if (/iPhone/i.test(ua)) return 'iPhone';
+  if (/Android.*Mobile/i.test(ua)) return 'Android Phone';
+  if (/Android/i.test(ua)) return 'Android Tablet';
+  if (/Macintosh/i.test(ua)) return 'Mac';
+  if (/Windows/i.test(ua)) return 'Windows';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return 'Unknown';
+}
+
+function parseBrowser(ua) {
+  if (/Edg\//i.test(ua)) return 'Edge';
+  if (/OPR|Opera/i.test(ua)) return 'Opera';
+  if (/Chrome/i.test(ua) && !/Edg/i.test(ua)) return 'Chrome';
+  if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) return 'Safari';
+  if (/Firefox/i.test(ua)) return 'Firefox';
+  return 'Other';
+}
+
+function renderBreakdown(elId, data, total) {
+  const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const max = sorted.length ? sorted[0][1] : 1;
+  document.getElementById(elId).innerHTML = sorted.length === 0 ? '<div style="color:var(--text-muted);font-size:0.82rem">No data</div>' :
+    sorted.map(([label, count]) => `<div class="analytics-row"><span class="label">${esc(label)}</span><div class="analytics-bar"><div class="analytics-bar-fill" style="width:${(count/max)*100}%"></div></div><span class="count">${count}</span></div>`).join('');
+}
+
+function drawChart(data) {
+  const canvas = document.getElementById('analyticsChart');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.parentElement.clientWidth - 24;
+  const h = 140;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const max = Math.max(1, ...data.map(d => d.count));
+  const barW = Math.max(2, (w - 40) / data.length - 1);
+  const gap = 1;
+  const chartH = h - 25;
+  const offsetX = 30;
+
+  // Grid lines
+  ctx.strokeStyle = '#e0ddd8';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = 5 + (chartH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(offsetX, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  // Y-axis labels
+  ctx.fillStyle = '#8a8580';
+  ctx.font = '10px Nunito Sans, sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const val = Math.round(max * (4 - i) / 4);
+    ctx.fillText(val, offsetX - 4, 5 + (chartH / 4) * i + 4);
+  }
+
+  // Bars
+  ctx.fillStyle = '#145d7a';
+  data.forEach((d, i) => {
+    const bh = (d.count / max) * chartH;
+    const x = offsetX + i * (barW + gap);
+    const y = 5 + chartH - bh;
+    ctx.beginPath();
+    if (barW >= 4) {
+      const r = Math.min(2, barW / 2);
+      ctx.moveTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.lineTo(x + barW - r, y); ctx.quadraticCurveTo(x + barW, y, x + barW, y + r);
+      ctx.lineTo(x + barW, 5 + chartH); ctx.lineTo(x, 5 + chartH);
+    } else {
+      ctx.rect(x, y, barW, bh);
+    }
+    ctx.fill();
+  });
+
+  // X-axis labels (show a few)
+  ctx.fillStyle = '#8a8580';
+  ctx.font = '9px Nunito Sans, sans-serif';
+  ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(data.length / 6));
+  data.forEach((d, i) => {
+    if (i % step === 0 || i === data.length - 1) {
+      const x = offsetX + i * (barW + gap) + barW / 2;
+      const dt = new Date(d.date + 'T12:00');
+      ctx.fillText(dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, h - 2);
+    }
+  });
+}
+
 // ─── Redirect (public — no auth needed) ───
 async function handleRedirect() {
   const h = location.hash;
   if (!h.startsWith('#/q/')) return false;
   const slug = h.replace('#/q/', '');
 
-  // Use RPC to atomically increment scans and get link data
-  const { data, error } = await sb.rpc('increment_scans', { link_slug: slug });
+  // Use RPC to atomically increment scans and log details
+  const { data, error } = await sb.rpc('increment_scans', {
+    link_slug: slug,
+    scan_user_agent: navigator.userAgent || '',
+    scan_referrer: document.referrer || ''
+  });
   if (error || !data) {
     document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito Sans',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:0.5rem;color:#a42547">Link Not Found</h1><p style="color:#5A7080">This QR code is no longer active.</p></div></div>`;
     return true;
