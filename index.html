@@ -492,6 +492,43 @@ body::before {
 .empty h3 { font-family: 'DM Serif Display', serif; font-size: 1.1rem; margin-bottom: 0.3rem; }
 .empty p { color: var(--text-muted); font-size: 0.88rem; }
 
+/* ═══ SEARCH & BULK ═══ */
+.search-bar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.search-bar input { flex: 1; min-width: 160px; padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.84rem; font-family: inherit; background: var(--surface); }
+.search-bar input:focus { outline: none; border-color: var(--teal); }
+.bulk-actions { display: flex; align-items: center; gap: 0.5rem; }
+.bulk-actions #bulkCount { font-size: 0.78rem; font-weight: 700; color: var(--navy); }
+.card-select { position: absolute; top: 0.5rem; left: 0.5rem; z-index: 2; }
+.card-select input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--navy); }
+.card { position: relative; }
+.card.selected { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(20,93,122,0.2); }
+.card-expired-badge { display: inline-block; font-size: 0.68rem; font-weight: 700; background: var(--crimson); color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.4rem; }
+.card-expiry { font-size: 0.73rem; color: var(--text-muted); }
+.card-expiry.expiring-soon { color: var(--orange); font-weight: 600; }
+.card-expiry.expired { color: var(--crimson); font-weight: 600; }
+
+/* ═══ ANALYTICS ═══ */
+.modal-wide { max-width: 560px; }
+.analytics-period { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
+.analytics-period .btn.active { background: var(--navy); color: #fff; }
+.analytics-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
+.analytics-chart-wrap { background: var(--bg); border-radius: 10px; padding: 0.75rem; margin-bottom: 1.25rem; }
+.analytics-chart-wrap canvas { width: 100%; display: block; }
+.analytics-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+.analytics-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 0.5rem; }
+.analytics-list { font-size: 0.82rem; }
+.analytics-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
+.analytics-row:last-child { border: none; }
+.analytics-row .label { color: var(--navy); }
+.analytics-row .count { font-weight: 700; color: var(--teal); font-size: 0.78rem; }
+.analytics-row .time { color: var(--text-muted); font-size: 0.73rem; }
+.analytics-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 0.2rem; flex: 1; margin-left: 0.75rem; margin-right: 0.5rem; }
+.analytics-bar-fill { height: 100%; background: var(--teal); border-radius: 2px; }
+@media (max-width: 600px) {
+  .analytics-breakdown { grid-template-columns: 1fr; }
+  .analytics-stats { grid-template-columns: 1fr; }
+}
+
 /* ═══ TOAST ═══ */
 .toast {
   position: fixed; bottom: 1.5rem; right: 1.5rem;
@@ -593,6 +630,14 @@ body::before {
         <h2>Your Links</h2>
         <button class="btn btn-gold" onclick="openCreate()">+ New Link</button>
       </div>
+      <div class="search-bar" id="searchBar" style="display:none">
+        <input type="text" id="searchInput" placeholder="Search links..." oninput="render()">
+        <div class="bulk-actions" id="bulkActions" style="display:none">
+          <span id="bulkCount">0 selected</span>
+          <button class="btn btn-danger-ghost btn-xs" onclick="bulkDelete()">Delete Selected</button>
+          <button class="btn btn-soft btn-xs" onclick="clearSelection()">Cancel</button>
+        </div>
+      </div>
       <div class="empty" id="emptyMsg">
         <div class="empty-icon">&#9901;</div>
         <h3>No links yet</h3>
@@ -613,6 +658,10 @@ body::before {
       <div class="field">
         <label>Default Destination URL</label>
         <input type="url" id="fUrl" placeholder="https://youtube.com/watch?v=...">
+      </div>
+      <div class="field">
+        <label>Expires <span style="font-weight:400;font-size:0.76rem;color:var(--text-muted)">(optional — leave blank for no expiry)</span></label>
+        <input type="datetime-local" id="fExpiry">
       </div>
       <div class="rules-section">
         <h4>
@@ -661,6 +710,44 @@ body::before {
       </div>
       <div class="modal-foot">
         <button class="btn btn-outline" onclick="closeModal('dlOverlay')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ANALYTICS MODAL ═══ -->
+  <div class="overlay" id="analyticsOverlay">
+    <div class="modal modal-wide">
+      <h3 id="analyticsTitle">Scan Analytics</h3>
+      <div class="analytics-period">
+        <button class="btn btn-soft btn-xs active" data-period="7" onclick="setAnalyticsPeriod(7, this)">7 days</button>
+        <button class="btn btn-soft btn-xs" data-period="30" onclick="setAnalyticsPeriod(30, this)">30 days</button>
+        <button class="btn btn-soft btn-xs" data-period="90" onclick="setAnalyticsPeriod(90, this)">90 days</button>
+        <button class="btn btn-soft btn-xs" data-period="0" onclick="setAnalyticsPeriod(0, this)">All time</button>
+      </div>
+      <div class="analytics-stats" id="analyticsStats">
+        <div class="stat"><div class="stat-label">Total Scans</div><div class="stat-val" id="aTotal">0</div></div>
+        <div class="stat"><div class="stat-label">This Period</div><div class="stat-val" id="aPeriod">0</div></div>
+        <div class="stat"><div class="stat-label">Peak Day</div><div class="stat-val" id="aPeak">—</div></div>
+      </div>
+      <div class="analytics-chart-wrap">
+        <canvas id="analyticsChart" height="160"></canvas>
+      </div>
+      <div class="analytics-breakdown">
+        <div class="analytics-col">
+          <div class="analytics-section-title">Top Devices</div>
+          <div id="aDevices" class="analytics-list"></div>
+        </div>
+        <div class="analytics-col">
+          <div class="analytics-section-title">Top Browsers</div>
+          <div id="aBrowsers" class="analytics-list"></div>
+        </div>
+      </div>
+      <div class="analytics-recent">
+        <div class="analytics-section-title">Recent Scans</div>
+        <div id="aRecent" class="analytics-list"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" onclick="closeModal('analyticsOverlay')">Close</button>
       </div>
     </div>
   </div>
@@ -757,6 +844,7 @@ function openCreate() {
   document.getElementById('editSaveBtn').textContent = 'Create';
   document.getElementById('fLabel').value = '';
   document.getElementById('fUrl').value = '';
+  document.getElementById('fExpiry').value = '';
   renderRuleEditors();
   openModal('editOverlay');
 }
@@ -770,6 +858,7 @@ function openEdit(id) {
   document.getElementById('editSaveBtn').textContent = 'Save';
   document.getElementById('fLabel').value = c.label;
   document.getElementById('fUrl').value = c.url;
+  document.getElementById('fExpiry').value = c.expires_at ? new Date(c.expires_at).toISOString().slice(0, 16) : '';
   renderRuleEditors();
   openModal('editOverlay');
 }
@@ -780,6 +869,8 @@ async function saveLink() {
   try { new URL(url); } catch(e) { return toast('Please enter a valid URL'); }
   collectRulesFromDOM();
   const rules = tempRules.filter(r => r.url && (r.days.length > 0 || r.startTime || r.endTime));
+  const expiryVal = document.getElementById('fExpiry').value;
+  const expires_at = expiryVal ? new Date(expiryVal).toISOString() : null;
 
   try {
     if (editId) {
@@ -792,13 +883,13 @@ async function saveLink() {
       const updRes = await fetch(SUPABASE_URL + '/rest/v1/links?id=eq.' + editId, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ label, url, rules, history, updated_at: new Date().toISOString() })
+        body: JSON.stringify({ label, url, rules, history, expires_at, updated_at: new Date().toISOString() })
       });
       if (!updRes.ok) { console.error('Update error:', await updRes.text()); return toast('Update failed'); }
       toast('Link updated!', true);
     } else {
       if (!currentUser) return toast('Not signed in — please refresh');
-      const payload = { user_id: currentUser.id, slug: genSlug(), label, url, rules, history: [] };
+      const payload = { user_id: currentUser.id, slug: genSlug(), label, url, rules, history: [], expires_at };
       const token = currentSession?.access_token || SUPABASE_ANON;
       const fetchRes = await fetch(SUPABASE_URL + '/rest/v1/links', {
         method: 'POST',
@@ -877,26 +968,89 @@ function renderRuleEditors() {
   `).join('');
 }
 
+// ─── Selection ───
+let selectedIds = new Set();
+
+function toggleSelect(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  updateBulkUI();
+  document.querySelector(`.card[data-id="${id}"]`)?.classList.toggle('selected', selectedIds.has(id));
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  updateBulkUI();
+  document.querySelectorAll('.card.selected').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll('.card-select input').forEach(cb => cb.checked = false);
+}
+
+function updateBulkUI() {
+  const bar = document.getElementById('bulkActions');
+  bar.style.display = selectedIds.size > 0 ? 'flex' : 'none';
+  document.getElementById('bulkCount').textContent = selectedIds.size + ' selected';
+}
+
+async function bulkDelete() {
+  if (!selectedIds.size) return;
+  if (!confirm(`Delete ${selectedIds.size} link${selectedIds.size > 1 ? 's' : ''}? Printed QR codes will stop working.`)) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  const ids = [...selectedIds];
+  const res = await fetch(SUPABASE_URL + '/rest/v1/links?id=in.(' + ids.join(',') + ')', {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token }
+  });
+  if (!res.ok) return toast('Bulk delete failed');
+  selectedIds.clear();
+  await loadLinks();
+  render();
+  toast(ids.length + ' link' + (ids.length > 1 ? 's' : '') + ' deleted');
+}
+
+function getExpiryStatus(c) {
+  if (!c.expires_at) return null;
+  const exp = new Date(c.expires_at);
+  const now = new Date();
+  if (exp <= now) return 'expired';
+  const hoursLeft = (exp - now) / 3600000;
+  if (hoursLeft <= 24) return 'expiring-soon';
+  return 'active';
+}
+
 // ─── Rendering ───
 function render() {
   const list = document.getElementById('cardList'), empty = document.getElementById('emptyMsg');
-  if (!list || !empty) return;            // DOM not ready yet
+  if (!list || !empty) return;
   document.getElementById('sTotal').textContent = myLinks.length;
   document.getElementById('sScans').textContent = myLinks.reduce((s, c) => s + (c.scans || 0), 0);
   document.getElementById('sRules').textContent = myLinks.filter(c => c.rules?.length > 0).length;
-  if (!myLinks.length) { empty.style.display = 'block'; list.querySelectorAll('.card').forEach(e => e.remove()); return; }
+
+  // Show/hide search bar
+  document.getElementById('searchBar').style.display = myLinks.length > 0 ? 'flex' : 'none';
+
+  if (!myLinks.length) { empty.style.display = 'block'; list.innerHTML = ''; return; }
   empty.style.display = 'none';
-  const sorted = [...myLinks].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+  // Filter by search
+  const query = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  let filtered = myLinks;
+  if (query) {
+    filtered = myLinks.filter(c => c.label.toLowerCase().includes(query) || c.url.toLowerCase().includes(query) || c.slug.toLowerCase().includes(query));
+  }
+
+  const sorted = [...filtered].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
   list.innerHTML = sorted.map(c => {
     const link = BASE + '#/q/' + c.slug;
     const hasRules = c.rules?.length > 0;
     const active = hasRules ? getActiveRule(c) : null;
     const dest = active ? active.url : c.url;
+    const expStatus = getExpiryStatus(c);
+    const isExpired = expStatus === 'expired';
     return `
-    <div class="card">
+    <div class="card${selectedIds.has(c.id) ? ' selected' : ''}" data-id="${c.id}">
+      <div class="card-select"><input type="checkbox" ${selectedIds.has(c.id) ? 'checked' : ''} onclick="toggleSelect('${c.id}')"></div>
       <div class="card-qr" id="qr-${c.id}"></div>
       <div class="card-body">
-        <div class="card-label">${esc(c.label)}</div>
+        <div class="card-label">${esc(c.label)}${isExpired ? '<span class="card-expired-badge">EXPIRED</span>' : ''}</div>
         <div class="card-url">&#8594; ${esc(dest)}${active ? ' <span style="color:var(--teal);font-weight:600">(rule active)</span>' : ''}</div>
         <div class="card-link-row">
           <span class="card-link-url"><a href="${link}" target="_blank">${link}</a></span>
@@ -904,12 +1058,14 @@ function render() {
         </div>
         ${hasRules ? `<div class="rules-preview">${c.rules.map(r => `<div class="rule-row"><span class="rule-when">${fmtWhen(r)}</span><span class="rule-dest">&#8594; ${esc(r.url)}</span></div>`).join('')}<div class="rule-row" style="border:none"><span class="rule-when" style="color:var(--text-muted)">Otherwise</span><span class="rule-dest">&#8594; ${esc(c.url)}</span></div></div>` : ''}
         <div class="card-meta">
-          <span class="scans">${c.scans || 0} scans</span>
+          <span class="scans" style="cursor:pointer" onclick="openAnalytics('${c.id}')">${c.scans || 0} scans</span>
           ${hasRules ? `<span class="card-rules-badge">&#9881; ${c.rules.length} rule${c.rules.length > 1 ? 's' : ''}</span>` : ''}
+          ${c.expires_at ? `<span class="card-expiry ${expStatus}">${isExpired ? 'Expired' : 'Expires'} ${timeAgo(c.expires_at)}</span>` : ''}
           <span>Updated ${timeAgo(c.updated_at)}</span>
         </div>
         <div class="card-actions">
           <button class="btn btn-soft btn-xs" onclick="openEdit('${c.id}')">Edit</button>
+          <button class="btn btn-outline btn-xs" onclick="openAnalytics('${c.id}')">Analytics</button>
           <button class="btn btn-outline btn-xs" onclick="openDL('${c.id}')">Download QR</button>
           <button class="btn btn-outline btn-xs" onclick="shareLink('${c.slug}')">Share</button>
           <button class="btn btn-danger-ghost btn-xs" onclick="deleteLink('${c.id}')">Delete</button>
@@ -1125,16 +1281,198 @@ function dlQR(fmt) {
   toast('Downloaded!', true);
 }
 
+// ─── Analytics ───
+let analyticsLinkId = null;
+let analyticsPeriod = 7;
+let scanLogsCache = [];
+
+async function openAnalytics(id) {
+  analyticsLinkId = id;
+  analyticsPeriod = 7;
+  const c = myLinks.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('analyticsTitle').textContent = 'Analytics — ' + c.label;
+  document.querySelectorAll('.analytics-period .btn').forEach(b => b.classList.toggle('active', b.dataset.period === '7'));
+  openModal('analyticsOverlay');
+
+  // Fetch scan logs
+  const token = currentSession?.access_token;
+  const headers = { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + (token || SUPABASE_ANON) };
+  const res = await fetch(SUPABASE_URL + '/rest/v1/scan_logs?link_id=eq.' + id + '&order=scanned_at.desc&limit=5000', { headers });
+  if (!res.ok) { toast('Failed to load analytics'); return; }
+  scanLogsCache = await res.json();
+  renderAnalytics();
+}
+
+function setAnalyticsPeriod(days, btn) {
+  analyticsPeriod = days;
+  document.querySelectorAll('.analytics-period .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAnalytics();
+}
+
+function renderAnalytics() {
+  const now = new Date();
+  const logs = analyticsPeriod === 0 ? scanLogsCache :
+    scanLogsCache.filter(l => (now - new Date(l.scanned_at)) < analyticsPeriod * 86400000);
+
+  // Stats
+  document.getElementById('aTotal').textContent = scanLogsCache.length;
+  document.getElementById('aPeriod').textContent = logs.length;
+
+  // Group by date
+  const byDate = {};
+  logs.forEach(l => {
+    const d = new Date(l.scanned_at).toISOString().slice(0, 10);
+    byDate[d] = (byDate[d] || 0) + 1;
+  });
+
+  // Peak day
+  let peakDay = '—', peakCount = 0;
+  Object.entries(byDate).forEach(([d, c]) => { if (c > peakCount) { peakCount = c; peakDay = d; } });
+  document.getElementById('aPeak').textContent = peakCount > 0 ? new Date(peakDay + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+
+  // Chart — fill in missing days
+  const days = analyticsPeriod || Math.max(30, Math.ceil((now - new Date(Math.min(...scanLogsCache.map(l => new Date(l.scanned_at))))) / 86400000) + 1);
+  const chartData = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    chartData.push({ date: key, count: byDate[key] || 0 });
+  }
+  drawChart(chartData);
+
+  // Parse user agents
+  const devices = {}, browsers = {};
+  logs.forEach(l => {
+    const ua = l.user_agent || '';
+    const dev = parseDevice(ua);
+    const br = parseBrowser(ua);
+    devices[dev] = (devices[dev] || 0) + 1;
+    browsers[br] = (browsers[br] || 0) + 1;
+  });
+
+  renderBreakdown('aDevices', devices, logs.length);
+  renderBreakdown('aBrowsers', browsers, logs.length);
+
+  // Recent scans
+  const recent = logs.slice(0, 10);
+  document.getElementById('aRecent').innerHTML = recent.length === 0 ? '<div style="color:var(--text-muted);font-size:0.82rem">No scans yet</div>' :
+    recent.map(l => `<div class="analytics-row"><span class="label">${parseBrowser(l.user_agent || '')} · ${parseDevice(l.user_agent || '')}</span><span class="time">${timeAgo(l.scanned_at)}</span></div>`).join('');
+}
+
+function parseDevice(ua) {
+  if (/iPad/i.test(ua)) return 'iPad';
+  if (/iPhone/i.test(ua)) return 'iPhone';
+  if (/Android.*Mobile/i.test(ua)) return 'Android Phone';
+  if (/Android/i.test(ua)) return 'Android Tablet';
+  if (/Macintosh/i.test(ua)) return 'Mac';
+  if (/Windows/i.test(ua)) return 'Windows';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return 'Unknown';
+}
+
+function parseBrowser(ua) {
+  if (/Edg\//i.test(ua)) return 'Edge';
+  if (/OPR|Opera/i.test(ua)) return 'Opera';
+  if (/Chrome/i.test(ua) && !/Edg/i.test(ua)) return 'Chrome';
+  if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) return 'Safari';
+  if (/Firefox/i.test(ua)) return 'Firefox';
+  return 'Other';
+}
+
+function renderBreakdown(elId, data, total) {
+  const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const max = sorted.length ? sorted[0][1] : 1;
+  document.getElementById(elId).innerHTML = sorted.length === 0 ? '<div style="color:var(--text-muted);font-size:0.82rem">No data</div>' :
+    sorted.map(([label, count]) => `<div class="analytics-row"><span class="label">${esc(label)}</span><div class="analytics-bar"><div class="analytics-bar-fill" style="width:${(count/max)*100}%"></div></div><span class="count">${count}</span></div>`).join('');
+}
+
+function drawChart(data) {
+  const canvas = document.getElementById('analyticsChart');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.parentElement.clientWidth - 24;
+  const h = 140;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const max = Math.max(1, ...data.map(d => d.count));
+  const barW = Math.max(2, (w - 40) / data.length - 1);
+  const gap = 1;
+  const chartH = h - 25;
+  const offsetX = 30;
+
+  // Grid lines
+  ctx.strokeStyle = '#e0ddd8';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = 5 + (chartH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(offsetX, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  // Y-axis labels
+  ctx.fillStyle = '#8a8580';
+  ctx.font = '10px Nunito Sans, sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const val = Math.round(max * (4 - i) / 4);
+    ctx.fillText(val, offsetX - 4, 5 + (chartH / 4) * i + 4);
+  }
+
+  // Bars
+  ctx.fillStyle = '#145d7a';
+  data.forEach((d, i) => {
+    const bh = (d.count / max) * chartH;
+    const x = offsetX + i * (barW + gap);
+    const y = 5 + chartH - bh;
+    ctx.beginPath();
+    if (barW >= 4) {
+      const r = Math.min(2, barW / 2);
+      ctx.moveTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.lineTo(x + barW - r, y); ctx.quadraticCurveTo(x + barW, y, x + barW, y + r);
+      ctx.lineTo(x + barW, 5 + chartH); ctx.lineTo(x, 5 + chartH);
+    } else {
+      ctx.rect(x, y, barW, bh);
+    }
+    ctx.fill();
+  });
+
+  // X-axis labels (show a few)
+  ctx.fillStyle = '#8a8580';
+  ctx.font = '9px Nunito Sans, sans-serif';
+  ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(data.length / 6));
+  data.forEach((d, i) => {
+    if (i % step === 0 || i === data.length - 1) {
+      const x = offsetX + i * (barW + gap) + barW / 2;
+      const dt = new Date(d.date + 'T12:00');
+      ctx.fillText(dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, h - 2);
+    }
+  });
+}
+
 // ─── Redirect (public — no auth needed) ───
 async function handleRedirect() {
   const h = location.hash;
   if (!h.startsWith('#/q/')) return false;
   const slug = h.replace('#/q/', '');
 
-  // Use RPC to atomically increment scans and get link data
-  const { data, error } = await sb.rpc('increment_scans', { link_slug: slug });
+  // Use RPC to atomically increment scans and log details
+  const { data, error } = await sb.rpc('increment_scans', {
+    link_slug: slug,
+    scan_user_agent: navigator.userAgent || '',
+    scan_referrer: document.referrer || ''
+  });
   if (error || !data) {
     document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito Sans',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:0.5rem;color:#a42547">Link Not Found</h1><p style="color:#5A7080">This QR code is no longer active.</p></div></div>`;
+    return true;
+  }
+
+  // Check expiration
+  if (data.expires_at && new Date(data.expires_at) <= new Date()) {
+    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito Sans',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:0.5rem;color:#a42547">Link Expired</h1><p style="color:#5A7080">This QR code is no longer active.</p></div></div>`;
     return true;
   }
 
@@ -1151,7 +1489,7 @@ function genSlug() { return Math.random().toString(36).slice(2,8); }
 function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function timeAgo(d) { const s=Math.floor((Date.now()-new Date(d))/1000); if(s<60)return'just now'; if(s<3600)return Math.floor(s/60)+'m ago'; if(s<86400)return Math.floor(s/3600)+'h ago'; if(s<2592e6)return Math.floor(s/86400)+'d ago'; return new Date(d).toLocaleDateString(); }
+function timeAgo(d) { const diff=Date.now()-new Date(d); const s=Math.floor(Math.abs(diff)/1000); const suffix=diff<0?'':'ago'; const prefix=diff<0?'in ':''; if(s<60)return diff<0?'in a moment':'just now'; if(s<3600)return prefix+Math.floor(s/60)+'m '+suffix; if(s<86400)return prefix+Math.floor(s/3600)+'h '+suffix; if(s<2592e6)return prefix+Math.floor(s/86400)+'d '+suffix; return new Date(d).toLocaleDateString(); }
 function toast(msg,ok) { const el=document.getElementById('toast'); el.textContent=msg; el.className='toast show'+(ok?' ok':''); setTimeout(()=>el.className='toast',2400); }
 
 document.querySelectorAll('.overlay').forEach(o => { o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }); });
