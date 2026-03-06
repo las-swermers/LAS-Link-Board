@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>LAS LinkBoard — Dynamic QR Codes</title>
+<meta name="theme-color" content="#093554">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/public/LAS-black-lettering.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,12 +42,15 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+* { -webkit-tap-highlight-color: transparent; }
+html { scroll-behavior: smooth; }
 body {
   font-family: 'Nunito Sans', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
 }
 
 /* ═══ Alpine-inspired background ═══ */
@@ -542,15 +550,42 @@ body::before {
 
 /* ═══ RESPONSIVE ═══ */
 @media (max-width: 600px) {
-  .card { grid-template-columns: 1fr; }
-  .card-qr { margin: 0 auto; }
-  .stats { grid-template-columns: 1fr; }
+  .topbar { padding: 0 0.75rem; padding-top: env(safe-area-inset-top); }
+  .topbar-user { display: none; }
+  .topbar-title { font-size: 0.95rem; }
+  .topbar-brand img { height: 22px !important; }
+  .main { padding: 1rem 0.75rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+  .stats { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+  .stat { padding: 0.65rem; }
+  .stat-val { font-size: 1.25rem; }
+  .stat-label { font-size: 0.62rem; }
   .page-head { flex-direction: column; gap: 0.75rem; align-items: stretch; }
-  .page-head .btn-gold { width: 100%; }
-  .topbar { padding: 0 1rem; }
-  .main { padding: 1rem; }
-  .auth-card { padding: 1.75rem; }
+  .page-head .btn-gold, .page-head .btn-outline { width: 100%; }
+  .page-head > div { display: flex; gap: 0.5rem; }
+  .page-head > div > * { flex: 1; }
+  .search-bar { flex-direction: column; }
+  .bulk-actions { width: 100%; justify-content: space-between; }
+  .card { grid-template-columns: 68px 1fr; gap: 0.75rem; padding: 1rem; }
+  .card-qr { width: 68px; height: 68px; }
+  .card-qr canvas, .card-qr img { width: 60px !important; height: 60px !important; }
+  .card-select { top: 0.35rem; left: 0.35rem; }
+  .card-label { font-size: 0.92rem; }
+  .card-actions { gap: 0.3rem; }
+  .card-actions .btn { font-size: 0.68rem; padding: 0.32rem 0.5rem; min-height: 32px; }
+  .card-link-row { padding: 0.3rem 0.45rem; }
+  .modal { padding: 1.5rem; border-radius: 14px; margin: 0.5rem; }
+  .modal h3 { font-size: 1.05rem; margin-bottom: 0.9rem; }
+  .dl-preview { padding: 0.5rem; }
+  .dl-preview canvas { max-width: 180px !important; max-height: 180px !important; }
+  .dl-btns { flex-direction: column; }
+  .dl-btns .btn { width: 100%; }
+  .color-swatches { gap: 0.35rem; }
+  .color-swatch { width: 32px; height: 32px; }
+  .logo-options { gap: 0.3rem; }
+  .logo-option { font-size: 0.72rem; padding: 0.35rem 0.6rem; }
+  .auth-card { padding: 1.5rem; margin: 0.75rem; }
   .rule-editor-row { flex-direction: column; }
+  .toast { bottom: calc(0.75rem + env(safe-area-inset-bottom)); right: 0.75rem; left: 0.75rem; text-align: center; }
 }
 </style>
 </head>
@@ -1699,6 +1734,11 @@ document.getElementById('regPassword').addEventListener('keydown', e => { if(e.k
     }
   });
 })();
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
