@@ -537,6 +537,21 @@ body::before {
   .analytics-stats { grid-template-columns: 1fr; }
 }
 
+/* ═══ PRINT ═══ */
+.print-link-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+.print-link-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.82rem; cursor: pointer; }
+.print-link-item:last-child { border: none; }
+.print-link-item:hover { background: var(--bg); }
+.print-link-item input { accent-color: var(--navy); width: 16px; height: 16px; }
+.print-link-item .label { font-weight: 600; color: var(--navy); flex: 1; }
+
+/* Print window styles injected dynamically */
+@media print {
+  body * { visibility: hidden; }
+  #printFrame, #printFrame * { visibility: visible; }
+  #printFrame { position: absolute; left: 0; top: 0; width: 100%; }
+}
+
 /* ═══ TOAST ═══ */
 .toast {
   position: fixed; bottom: 1.5rem; right: 1.5rem;
@@ -663,8 +678,9 @@ body::before {
       </div>
       <div class="page-head">
         <h2>Your Links</h2>
-        <div style="display:flex;gap:0.5rem">
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="shareProfile()">Share Profile</button>
+          <button class="btn btn-outline btn-sm" onclick="openPrint()">Print</button>
           <button class="btn btn-gold" onclick="openCreate()">+ New Link</button>
         </div>
       </div>
@@ -793,6 +809,26 @@ body::before {
       </div>
       <div class="modal-foot">
         <button class="btn btn-outline" onclick="closeModal('analyticsOverlay')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PRINT MODAL ═══ -->
+  <div class="overlay" id="printOverlay">
+    <div class="modal">
+      <h3>Print QR Codes</h3>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem">Choose a layout and select which links to print.</p>
+      <div class="qr-options-label">Layout</div>
+      <div class="logo-options" id="printLayoutOptions">
+        <div class="logo-option active" data-layout="poster" onclick="pickPrintLayout(this)">Poster</div>
+        <div class="logo-option" data-layout="grid" onclick="pickPrintLayout(this)">Grid (6/page)</div>
+        <div class="logo-option" data-layout="labels" onclick="pickPrintLayout(this)">Labels (12/page)</div>
+      </div>
+      <div class="qr-options-label" style="margin-top:0.75rem">Links to Print</div>
+      <div id="printLinkList" class="print-link-list"></div>
+      <div class="modal-foot">
+        <button class="btn btn-outline" onclick="closeModal('printOverlay')">Cancel</button>
+        <button class="btn btn-primary" onclick="doPrint()">Print</button>
       </div>
     </div>
   </div>
@@ -1598,6 +1634,116 @@ function drawChart(data) {
       const dt = new Date(d.date + 'T12:00');
       ctx.fillText(dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, h - 2);
     }
+  });
+}
+
+// ─── Print Layouts ───
+let printLayout = 'poster';
+let printSelection = new Set();
+
+function openPrint() {
+  if (!myLinks.length) return toast('No links to print');
+  printLayout = 'poster';
+  printSelection = new Set(myLinks.map(c => c.id));
+  document.querySelectorAll('#printLayoutOptions .logo-option').forEach(o => o.classList.toggle('active', o.dataset.layout === 'poster'));
+  const list = document.getElementById('printLinkList');
+  list.innerHTML = myLinks.map(c => `
+    <label class="print-link-item">
+      <input type="checkbox" checked onchange="togglePrintLink('${c.id}', this.checked)">
+      <span class="label">${esc(c.label)}</span>
+    </label>`).join('');
+  openModal('printOverlay');
+}
+
+function pickPrintLayout(el) {
+  document.querySelectorAll('#printLayoutOptions .logo-option').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  printLayout = el.dataset.layout;
+}
+
+function togglePrintLink(id, checked) {
+  if (checked) printSelection.add(id); else printSelection.delete(id);
+}
+
+function doPrint() {
+  const links = myLinks.filter(c => printSelection.has(c.id));
+  if (!links.length) return toast('Select at least one link');
+  closeModal('printOverlay');
+
+  // Generate QR canvases for each link
+  const qrPromises = links.map(c => {
+    return new Promise(resolve => {
+      const tmp = document.createElement('div');
+      const qr = new QRCode(tmp, {
+        text: BASE + '#/q/' + c.slug, width: 512, height: 512,
+        colorDark: '#a42547', colorLight: '#FFFFFF',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      setTimeout(() => {
+        const canvas = tmp.querySelector('canvas');
+        resolve({ link: c, dataUrl: canvas ? canvas.toDataURL('image/png') : '' });
+      }, 300);
+    });
+  });
+
+  Promise.all(qrPromises).then(items => {
+    let html = '';
+    if (printLayout === 'poster') {
+      html = items.map(({ link, dataUrl }) => `
+        <div style="page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center">
+          <img src="${dataUrl}" style="width:min(400px,70vw);height:auto">
+          <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:2.5rem;color:#093554;margin:1.5rem 0 0.5rem">${esc(link.label)}</h1>
+          <p style="font-size:1.1rem;color:#5A7080;margin:0 0 0.75rem">Scan to visit</p>
+          <p style="font-size:0.85rem;color:#a42547;font-weight:600;word-break:break-all">${BASE}#/q/${link.slug}</p>
+        </div>`).join('');
+    } else if (printLayout === 'grid') {
+      const rows = [];
+      for (let i = 0; i < items.length; i += 6) {
+        const page = items.slice(i, i + 6);
+        rows.push(`
+          <div style="page-break-after:always;display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;padding:1.5rem;min-height:100vh;align-content:start">
+            ${page.map(({ link, dataUrl }) => `
+              <div style="text-align:center;border:1px solid #e5e1dc;border-radius:12px;padding:1.25rem">
+                <img src="${dataUrl}" style="width:160px;height:160px">
+                <h3 style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;color:#093554;margin:0.75rem 0 0.25rem">${esc(link.label)}</h3>
+                <p style="font-size:0.7rem;color:#a42547;word-break:break-all;margin:0">${BASE}#/q/${link.slug}</p>
+              </div>`).join('')}
+          </div>`);
+      }
+      html = rows.join('');
+    } else { // labels
+      const rows = [];
+      for (let i = 0; i < items.length; i += 12) {
+        const page = items.slice(i, i + 12);
+        rows.push(`
+          <div style="page-break-after:always;display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;padding:1rem;min-height:100vh;align-content:start">
+            ${page.map(({ link, dataUrl }) => `
+              <div style="text-align:center;padding:0.5rem;border:1px dashed #ccc;border-radius:8px">
+                <img src="${dataUrl}" style="width:90px;height:90px">
+                <p style="font-size:0.65rem;font-weight:700;color:#093554;margin:0.3rem 0 0;line-height:1.2">${esc(link.label)}</p>
+                <p style="font-size:0.5rem;color:#a42547;margin:0;word-break:break-all">${link.slug}</p>
+              </div>`).join('')}
+          </div>`);
+      }
+      html = rows.join('');
+    }
+
+    // Open print window
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head>
+      <title>Print QR Codes — LAS LinkBoard</title>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Nunito Sans', sans-serif; }
+        @media print {
+          @page { margin: 0.5cm; }
+          div[style*="page-break-after"]:last-child { page-break-after: auto; }
+        }
+      </style>
+    </head><body>${html}</body></html>`);
+    win.document.close();
+    setTimeout(() => win.print(), 500);
   });
 }
 
