@@ -12,32 +12,36 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  /* LAS Official Brand Colors */
-  --crimson: #a42547;       /* Pantone 201C — primary brand red */
-  --orange: #ea6733;        /* Pantone 1575C — warm accent */
-  --red-orange: #d43b1b;    /* Pantone 1665C — bold action */
-  --navy: #093554;          /* Pantone 534C — deep navy */
-  --teal: #145d7a;          /* Pantone 7701C — alpine teal */
+  /* LAS Alpine Classic Palette */
+  --navy: #0B2545;          /* Deep signature navy */
+  --navy-mid: #134074;      /* Medium navy */
+  --navy-light: #13507C;
+  --gold: #C5963B;          /* Prestige gold — primary CTA */
+  --gold-hover: #B5862E;
+  --gold-light: #FBF5E9;
+  --crimson: #a42547;       /* Accent red */
   --crimson-hover: #8C1F3B;
   --crimson-light: #F9ECF0;
   --crimson-glow: rgba(164,37,71,0.12);
+  --teal: #13507C;          /* Alpine teal */
+  --teal-light: #E8F1F8;
+  --orange: #ea6733;
   --orange-light: #FDF0EB;
-  --navy-light: #0D4A73;
-  --teal-light: #E6F0F4;
-  --bg: #F7F6F3;
+  --red-orange: #d43b1b;
+  --bg: #F8F9FA;            /* Clean light grey */
   --surface: #FFFFFF;
-  --surface-alt: #F0EDE8;
-  --border: #DDD8CE;
-  --text: #093554;
-  --text-muted: #5A7080;
+  --surface-alt: #F1F3F5;
+  --border: #E2E6EA;
+  --text: #0B2545;
+  --text-muted: #6B7C8D;
   --danger: #d43b1b;
   --danger-light: #FDE9E5;
-  --radius: 12px;
-  --shadow: 0 2px 8px rgba(9,53,84,0.06);
-  --shadow-lg: 0 8px 32px rgba(9,53,84,0.1);
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(11,37,69,0.06), 0 1px 2px rgba(11,37,69,0.04);
+  --shadow-lg: 0 10px 40px rgba(11,37,69,0.12);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -45,23 +49,13 @@
 * { -webkit-tap-highlight-color: transparent; }
 html { scroll-behavior: smooth; }
 body {
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
-}
-
-/* ═══ Alpine-inspired background ═══ */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 15% 5%, rgba(164,37,71,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 95%, rgba(27,42,74,0.04) 0%, transparent 50%);
-  pointer-events: none;
+  letter-spacing: -0.01em;
 }
 
 .app { position: relative; z-index: 1; }
@@ -73,16 +67,17 @@ body::before {
   justify-content: center;
   min-height: 100vh;
   padding: 1.5rem;
-  background: linear-gradient(160deg, var(--navy) 0%, #1A2A3D 50%, #3D1628 100%);
+  background: var(--navy);
+  background-image: linear-gradient(135deg, #0B2545 0%, #134074 100%);
 }
 
 .auth-card {
   background: var(--surface);
-  border-radius: 18px;
+  border-radius: 16px;
   padding: 2.5rem;
   width: 100%;
-  max-width: 400px;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   animation: appear 0.4s ease;
 }
 
@@ -105,20 +100,20 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.35rem;
-  font-weight: 700;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
   color: #fff;
   letter-spacing: 0.05em;
-  border: 2.5px solid var(--crimson);
+  border: 2.5px solid var(--gold);
 }
 
 .auth-brand h1 {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--crimson);
-  letter-spacing: -0.01em;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.02em;
 }
 
 .auth-brand .school-name {
@@ -143,13 +138,13 @@ body::before {
   padding: 0.75rem 1rem;
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: 10px;
-  font-family: inherit;
-  font-size: 0.95rem;
+  border-radius: 8px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s;
   margin-bottom: 1.25rem;
 }
 
@@ -182,11 +177,12 @@ body::before {
 
 .field label {
   display: block;
-  font-size: 0.75rem;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   margin-bottom: 0.35rem;
 }
 
@@ -204,8 +200,8 @@ body::before {
 
 .field input:focus, .field select:focus {
   outline: none;
-  border-color: #fff;
-  box-shadow: 0 0 0 3px var(--crimson-glow);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(197,150,59,0.15);
   background: var(--surface);
 }
 
@@ -217,29 +213,30 @@ body::before {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.6rem 1.1rem;
+  padding: 0.6rem 1.2rem;
   border: none;
-  border-radius: 9px;
-  font-family: inherit;
-  font-size: 0.86rem;
-  font-weight: 700;
+  border-radius: 8px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
   text-decoration: none;
+  letter-spacing: 0.01em;
 }
 
 .btn-primary { background: var(--navy); color: #fff; }
-.btn-primary:hover { background: var(--navy-light); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(27,42,74,0.2); }
+.btn-primary:hover { background: var(--navy-light); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(11,37,69,0.25); }
 .btn-primary.full { width: 100%; }
 
-.btn-gold { background: var(--crimson); color: #fff; }
-.btn-gold:hover { background: var(--crimson-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(164,37,71,0.25); }
+.btn-gold { background: var(--gold); color: #fff; }
+.btn-gold:hover { background: var(--gold-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(197,150,59,0.35); }
 
-.btn-soft { background: var(--orange-light); color: var(--orange); border: 1px solid rgba(234,103,51,0.18); }
-.btn-soft:hover { background: #FAE0D4; }
+.btn-soft { background: var(--teal-light); color: var(--teal); border: 1px solid rgba(19,80,124,0.12); }
+.btn-soft:hover { background: #D4E6F1; }
 
 .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
-.btn-outline:hover { background: var(--surface-alt); border-color: var(--text-muted); }
+.btn-outline:hover { background: var(--surface-alt); border-color: var(--navy); color: var(--navy); }
 
 .btn-ghost { background: transparent; color: var(--text-muted); }
 .btn-ghost:hover { color: var(--text); background: var(--surface-alt); }
@@ -247,8 +244,8 @@ body::before {
 .btn-danger-ghost { background: transparent; color: var(--danger); }
 .btn-danger-ghost:hover { background: var(--danger-light); }
 
-.btn-sm { padding: 0.4rem 0.75rem; font-size: 0.8rem; }
-.btn-xs { padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 7px; }
+.btn-sm { padding: 0.45rem 0.85rem; font-size: 0.78rem; }
+.btn-xs { padding: 0.3rem 0.65rem; font-size: 0.73rem; border-radius: 6px; }
 
 .auth-toggle {
   text-align: center;
@@ -266,13 +263,13 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.5rem;
-  height: 56px;
+  padding: 0 2rem;
+  height: 60px;
   background: var(--navy);
   position: sticky;
   top: 0;
   z-index: 100;
-  border-bottom: 3px solid var(--crimson);
+  box-shadow: 0 2px 12px rgba(11,37,69,0.15);
 }
 
 .topbar-brand {
@@ -289,17 +286,18 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'DM Serif Display', serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 0.8rem;
   font-weight: 700;
   color: #fff;
 }
 
 .topbar-title {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.1rem;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
   font-weight: 700;
   color: #fff;
+  letter-spacing: 0.02em;
 }
 
 .topbar-right { display: flex; align-items: center; gap: 0.75rem; }
@@ -307,56 +305,59 @@ body::before {
 .topbar .btn-ghost { color: rgba(255,255,255,0.6); }
 .topbar .btn-ghost:hover { color: #fff; background: rgba(255,255,255,0.1); }
 
-.main { max-width: 860px; margin: 0 auto; padding: 1.5rem; }
+.main { max-width: 900px; margin: 0 auto; padding: 2rem 2rem; }
 
-/* ═══ STATS ═══ */
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+/* ═══ STATS — "By the Numbers" ═══ */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
 
 .stat {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 1.25rem 1rem;
   box-shadow: var(--shadow);
+  text-align: center;
 }
 
 .stat-label {
-  font-size: 0.7rem;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
 }
 
 .stat-val {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--crimson);
-  margin-top: 0.15rem;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--navy);
+  margin-top: 0.2rem;
+  line-height: 1;
 }
 
 /* ═══ HEADER ═══ */
-.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
-.page-head h2 { font-family: 'DM Serif Display', serif; font-size: 1.35rem; font-weight: 700; }
+.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.page-head h2 { font-family: 'Montserrat', sans-serif; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
 
 /* ═══ QR CARDS ═══ */
-.cards { display: flex; flex-direction: column; gap: 0.75rem; }
+.cards { display: flex; flex-direction: column; gap: 1rem; }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.2rem;
+  padding: 1.5rem;
   box-shadow: var(--shadow);
   display: grid;
   grid-template-columns: 88px 1fr;
-  gap: 1.2rem;
+  gap: 1.5rem;
   align-items: start;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: all 0.25s ease;
   animation: appear 0.3s ease;
 }
-.card:hover { border-color: #fff; box-shadow: 0 4px 16px rgba(197,150,59,0.08); }
+.card:hover { border-color: var(--gold); box-shadow: 0 4px 20px rgba(197,150,59,0.12); transform: translateY(-1px); }
 
 .card-qr {
   width: 88px; height: 88px;
@@ -369,15 +370,15 @@ body::before {
 .card-qr canvas, .card-qr img { width: 78px !important; height: 78px !important; }
 
 .card-body { min-width: 0; }
-.card-label { font-size: 1rem; font-weight: 700; color: var(--navy); line-height: 1.3; }
+.card-label { font-family: 'Montserrat', sans-serif; font-size: 1rem; font-weight: 700; color: var(--navy); line-height: 1.3; }
 .card-url { font-size: 0.78rem; color: var(--text-muted); word-break: break-all; line-height: 1.4; margin-top: 0.15rem; }
 
 .card-link-row {
   display: flex; align-items: center; gap: 0.5rem;
-  margin: 0.45rem 0; padding: 0.35rem 0.6rem;
-  background: var(--crimson-light); border-radius: 8px; font-size: 0.78rem;
+  margin: 0.5rem 0; padding: 0.4rem 0.65rem;
+  background: var(--gold-light); border-radius: 8px; font-size: 0.78rem;
 }
-.card-link-url { color: var(--crimson); font-weight: 600; word-break: break-all; flex: 1; }
+.card-link-url { color: var(--gold-hover); font-weight: 600; word-break: break-all; flex: 1; }
 .card-link-url a { color: inherit; text-decoration: none; }
 .card-link-url a:hover { text-decoration: underline; }
 
@@ -417,11 +418,11 @@ body::before {
 
 .modal {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 18px; padding: 2rem; width: 100%; max-width: 520px;
+  border-radius: 14px; padding: 2rem; width: 100%; max-width: 520px;
   max-height: 90vh; overflow-y: auto;
   box-shadow: var(--shadow-lg); animation: appear 0.25s ease;
 }
-.modal h3 { font-family: 'DM Serif Display', serif; font-size: 1.2rem; margin-bottom: 1.2rem; }
+.modal h3 { font-family: 'Montserrat', sans-serif; font-size: 1.15rem; font-weight: 700; margin-bottom: 1.2rem; }
 .modal-foot { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem; }
 
 /* ═══ RULES EDITOR ═══ */
@@ -462,8 +463,9 @@ body::before {
 /* ═══ QR CUSTOMIZATION ═══ */
 .qr-options { margin: 0.75rem 0; }
 .qr-options-label {
-  font-size: 0.7rem; font-weight: 700; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.68rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem;
 }
 .color-swatches { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
 .color-swatch {
@@ -497,7 +499,7 @@ body::before {
 /* ═══ EMPTY ═══ */
 .empty { text-align: center; padding: 3rem 1.5rem; }
 .empty-icon { font-size: 2.5rem; margin-bottom: 0.6rem; opacity: 0.35; }
-.empty h3 { font-family: 'DM Serif Display', serif; font-size: 1.1rem; margin-bottom: 0.3rem; }
+.empty h3 { font-family: 'Montserrat', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.3rem; }
 .empty p { color: var(--text-muted); font-size: 0.88rem; }
 
 /* ═══ SEARCH & BULK ═══ */
@@ -518,12 +520,12 @@ body::before {
 /* ═══ ANALYTICS ═══ */
 .modal-wide { max-width: 560px; }
 .analytics-period { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
-.analytics-period .btn.active { background: var(--navy); color: #fff; }
+.analytics-period .btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
 .analytics-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
 .analytics-chart-wrap { background: var(--bg); border-radius: 10px; padding: 0.75rem; margin-bottom: 1.25rem; }
 .analytics-chart-wrap canvas { width: 100%; display: block; }
 .analytics-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
-.analytics-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 0.5rem; }
+.analytics-section-title { font-family: 'Montserrat', sans-serif; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.5rem; }
 .analytics-list { font-size: 0.82rem; }
 .analytics-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
 .analytics-row:last-child { border: none; }
@@ -565,7 +567,7 @@ body::before {
 
 /* ═══ RESPONSIVE ═══ */
 @media (max-width: 600px) {
-  .topbar { padding: 0 0.75rem; padding-top: env(safe-area-inset-top); }
+  .topbar { padding: 0 1rem; padding-top: env(safe-area-inset-top); }
   .topbar-user { display: none; }
   .topbar-title { font-size: 0.95rem; }
   .topbar-brand img { height: 22px !important; }
@@ -611,7 +613,7 @@ body::before {
   <div class="auth-screen" id="authScreen">
     <div class="auth-card">
       <div class="auth-brand">
-        <img src="https://resources.finalsite.net/images/f_auto,q_auto,t_image_size_1/v1728042498/lasch/diqeqgjdqjuhcfswwovk/LAS_Logo_WEB_Horizontal.png" alt="Leysin American School" class="auth-logo-img" style="width:220px;margin:0 auto 1rem;display:block;" onerror="this.style.display='none';document.getElementById('authCrestFallback').style.display='flex'"><div id="authCrestFallback" style="display:none;width:64px;height:64px;margin:0 auto 0.75rem;background:var(--navy);border-radius:50%;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:1.35rem;font-weight:700;color:#fff;border:2.5px solid var(--crimson)">LAS</div>
+        <img src="https://resources.finalsite.net/images/f_auto,q_auto,t_image_size_1/v1728042498/lasch/diqeqgjdqjuhcfswwovk/LAS_Logo_WEB_Horizontal.png" alt="Leysin American School" class="auth-logo-img" style="width:220px;margin:0 auto 1rem;display:block;" onerror="this.style.display='none';document.getElementById('authCrestFallback').style.display='flex'"><div id="authCrestFallback" style="display:none;width:64px;height:64px;margin:0 auto 0.75rem;background:var(--navy);border-radius:50%;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:1.2rem;font-weight:800;color:#fff;border:2.5px solid var(--gold)">LAS</div>
         <h1>LinkBoard</h1>
         <div class="school-name">Dynamic QR codes for your classroom</div>
       </div>
@@ -661,7 +663,7 @@ body::before {
   <div class="dashboard" id="dash">
     <div class="topbar">
       <div class="topbar-brand">
-        <img src="https://resources.finalsite.net/images/f_auto,q_auto,t_image_size_1/v1728042498/lasch/diqeqgjdqjuhcfswwovk/LAS_Logo_WEB_Horizontal.png" alt="LAS" style="height:28px;filter:brightness(0) invert(1);opacity:0.95;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div style="display:none;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--crimson);align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:0.8rem;font-weight:700;color:#fff;">LAS</div>
+        <img src="https://resources.finalsite.net/images/f_auto,q_auto,t_image_size_1/v1728042498/lasch/diqeqgjdqjuhcfswwovk/LAS_Logo_WEB_Horizontal.png" alt="LAS" style="height:28px;filter:brightness(0) invert(1);opacity:0.95;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div style="display:none;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--gold);align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:0.7rem;font-weight:800;color:#fff;">LAS</div>
         <span style="color:rgba(255,255,255,0.3);margin:0 0.35rem">|</span>
         <div class="topbar-title">LinkBoard</div>
       </div>
@@ -1598,7 +1600,7 @@ function drawChart(data) {
 
   // Y-axis labels
   ctx.fillStyle = '#8a8580';
-  ctx.font = '10px Nunito Sans, sans-serif';
+  ctx.font = '10px Inter, sans-serif';
   ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++) {
     const val = Math.round(max * (4 - i) / 4);
@@ -1606,7 +1608,7 @@ function drawChart(data) {
   }
 
   // Bars
-  ctx.fillStyle = '#145d7a';
+  ctx.fillStyle = '#134074';
   data.forEach((d, i) => {
     const bh = (d.count / max) * chartH;
     const x = offsetX + i * (barW + gap);
@@ -1625,7 +1627,7 @@ function drawChart(data) {
 
   // X-axis labels (show a few)
   ctx.fillStyle = '#8a8580';
-  ctx.font = '9px Nunito Sans, sans-serif';
+  ctx.font = '9px Inter, sans-serif';
   ctx.textAlign = 'center';
   const step = Math.max(1, Math.floor(data.length / 6));
   data.forEach((d, i) => {
@@ -1692,7 +1694,7 @@ function doPrint() {
       html = items.map(({ link, dataUrl }) => `
         <div style="page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center">
           <img src="${dataUrl}" style="width:min(400px,70vw);height:auto">
-          <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:2.5rem;color:#093554;margin:1.5rem 0 0.5rem">${esc(link.label)}</h1>
+          <h1 style="font-family:'Montserrat',sans-serif;font-size:2.5rem;color:#093554;margin:1.5rem 0 0.5rem">${esc(link.label)}</h1>
           <p style="font-size:1.1rem;color:#5A7080;margin:0 0 0.75rem">Scan to visit</p>
           <p style="font-size:0.85rem;color:#a42547;font-weight:600;word-break:break-all">${BASE}#/q/${link.slug}</p>
         </div>`).join('');
@@ -1705,7 +1707,7 @@ function doPrint() {
             ${page.map(({ link, dataUrl }) => `
               <div style="text-align:center;border:1px solid #e5e1dc;border-radius:12px;padding:1.25rem">
                 <img src="${dataUrl}" style="width:160px;height:160px">
-                <h3 style="font-family:'DM Serif Display',Georgia,serif;font-size:1rem;color:#093554;margin:0.75rem 0 0.25rem">${esc(link.label)}</h3>
+                <h3 style="font-family:'Montserrat',sans-serif;font-size:1rem;color:#093554;margin:0.75rem 0 0.25rem">${esc(link.label)}</h3>
                 <p style="font-size:0.7rem;color:#a42547;word-break:break-all;margin:0">${BASE}#/q/${link.slug}</p>
               </div>`).join('')}
           </div>`);
@@ -1732,10 +1734,10 @@ function doPrint() {
     const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head>
       <title>Print QR Codes — LAS LinkBoard</title>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Nunito Sans', sans-serif; }
+        body { font-family: 'Inter', sans-serif; }
         @media print {
           @page { margin: 0.5cm; }
           div[style*="page-break-after"]:last-child { page-break-after: auto; }
@@ -1757,13 +1759,13 @@ async function handlePublicProfile() {
     headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
   });
   if (!res.ok) {
-    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito Sans',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:0.5rem;color:#a42547">Profile Not Found</h1><p style="color:#5A7080">This profile page doesn't exist or is private.</p></div></div>`;
+    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Inter',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'Montserrat',sans-serif;font-size:1.5rem;margin-bottom:0.5rem;color:#a42547">Profile Not Found</h1><p style="color:#5A7080">This profile page doesn't exist or is private.</p></div></div>`;
     return true;
   }
 
   const links = (await res.json()).filter(l => !l.expires_at || new Date(l.expires_at) > new Date());
   if (!links.length) {
-    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito Sans',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:0.5rem;color:#093554">No Active Links</h1><p style="color:#5A7080">This user hasn't shared any links yet.</p></div></div>`;
+    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Inter',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'Montserrat',sans-serif;font-size:1.5rem;margin-bottom:0.5rem;color:#093554">No Active Links</h1><p style="color:#5A7080">This user hasn't shared any links yet.</p></div></div>`;
     return true;
   }
 
@@ -1771,10 +1773,10 @@ async function handlePublicProfile() {
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('dash').style.display = 'none';
   const profileHTML = `
-    <div style="max-width:700px;margin:0 auto;padding:2rem 1.5rem;font-family:'Nunito Sans',sans-serif">
+    <div style="max-width:700px;margin:0 auto;padding:2rem 1.5rem;font-family:'Inter',sans-serif">
       <div style="text-align:center;margin-bottom:2rem">
         <img src="/public/LAS-black-lettering.png" alt="LAS" style="height:50px;margin-bottom:0.5rem" onerror="this.style.display='none'">
-        <h1 style="font-family:'DM Serif Display',serif;color:#093554;font-size:1.5rem;margin:0">Shared Links</h1>
+        <h1 style="font-family:'Montserrat',sans-serif;color:#093554;font-size:1.5rem;margin:0">Shared Links</h1>
         <p style="color:#5A7080;font-size:0.85rem;margin-top:0.3rem">${links.length} active link${links.length !== 1 ? 's' : ''}</p>
       </div>
       <div style="display:grid;gap:1rem">
@@ -1823,13 +1825,13 @@ async function handleRedirect() {
     scan_referrer: document.referrer || ''
   });
   if (error || !data) {
-    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito Sans',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:0.5rem;color:#a42547">Link Not Found</h1><p style="color:#5A7080">This QR code is no longer active.</p></div></div>`;
+    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Inter',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'Montserrat',sans-serif;font-size:1.5rem;margin-bottom:0.5rem;color:#a42547">Link Not Found</h1><p style="color:#5A7080">This QR code is no longer active.</p></div></div>`;
     return true;
   }
 
   // Check expiration
   if (data.expires_at && new Date(data.expires_at) <= new Date()) {
-    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito Sans',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'DM Serif Display',serif;font-size:1.5rem;margin-bottom:0.5rem;color:#a42547">Link Expired</h1><p style="color:#5A7080">This QR code is no longer active.</p></div></div>`;
+    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Inter',sans-serif;color:#093554;background:#F7F6F3;text-align:center;padding:2rem"><div><h1 style="font-family:'Montserrat',sans-serif;font-size:1.5rem;margin-bottom:0.5rem;color:#a42547">Link Expired</h1><p style="color:#5A7080">This QR code is no longer active.</p></div></div>`;
     return true;
   }
 
