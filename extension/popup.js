@@ -10,18 +10,33 @@ async function init() {
   }
 }
 
+// Listen for storage changes — if background worker saves credentials while popup is open
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.lb_token && changes.lb_token.newValue) {
+    const name = changes.lb_user_name?.newValue || 'User';
+    showMain(name);
+  }
+});
+
 // ── Google OAuth (delegated to background service worker) ──
 document.getElementById('googleBtn').addEventListener('click', async () => {
   const errEl = document.getElementById('loginError');
   errEl.style.display = 'none';
+  document.getElementById('googleBtn').textContent = 'Signing in...';
+  document.getElementById('googleBtn').disabled = true;
 
   // Delegate to background script so the flow survives popup closing
   chrome.runtime.sendMessage({ action: 'googleSignIn' }, (response) => {
     // If popup was closed during auth and reopened, response may be undefined
-    if (chrome.runtime.lastError || !response) return;
+    if (chrome.runtime.lastError || !response) {
+      // Not an error — popup may have closed and reopened, init() will handle it
+      return;
+    }
     if (response.error) {
       errEl.textContent = 'Sign-in error: ' + response.error;
       errEl.style.display = 'block';
+      document.getElementById('googleBtn').textContent = 'Sign in with Google';
+      document.getElementById('googleBtn').disabled = false;
     } else if (response.success) {
       showMain(response.name);
     }
