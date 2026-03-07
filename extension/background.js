@@ -10,10 +10,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 async function handleGoogleSignIn() {
   const redirectUrl = chrome.identity.getRedirectURL();
+  console.log('[LB] Redirect URL:', redirectUrl);
+
+  // Use response_type=token to get implicit flow (tokens in hash, no PKCE code exchange needed)
   const authUrl = SUPABASE_URL + '/auth/v1/authorize?' + new URLSearchParams({
     provider: 'google',
-    redirect_to: redirectUrl
+    redirect_to: redirectUrl,
+    response_type: 'token'
   }).toString();
+
+  console.log('[LB] Auth URL:', authUrl);
 
   try {
     const responseUrl = await chrome.identity.launchWebAuthFlow({
@@ -21,29 +27,24 @@ async function handleGoogleSignIn() {
       interactive: true
     });
 
-    // Supabase may return tokens in the hash fragment or query params
-    const url = new URL(responseUrl);
-    const hash = url.hash.substring(1);
-    const params = new URLSearchParams(hash || url.search);
-    let accessToken = params.get('access_token');
-    let refreshToken = params.get('refresh_token');
+    console.log('[LB] Response URL:', responseUrl);
 
-    // If Supabase returned a code instead of a token, exchange it
-    const code = params.get('code');
-    if (!accessToken && code) {
-      const tokenRes = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=pkce', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({ auth_code: code, code_verifier: '' })
-      });
-      const tokenData = await tokenRes.json();
-      accessToken = tokenData.access_token;
-      refreshToken = tokenData.refresh_token;
-    }
+    // Parse tokens from hash fragment (#access_token=...&refresh_token=...)
+    // or from query params (?access_token=...) as a fallback
+    const url = new URL(responseUrl);
+    const hashStr = url.hash.substring(1);
+    const hashParams = new URLSearchParams(hashStr);
+    const queryParams = new URLSearchParams(url.search);
+
+    let accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+    let refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
 
     if (!accessToken) {
-      return { error: 'No token received. Response: ' + responseUrl.substring(0, 200) };
+      console.error('[LB] No token found. Hash:', hashStr, 'Search:', url.search);
+      return { error: 'No token received. URL: ' + responseUrl.substring(0, 300) };
     }
+
+    console.log('[LB] Got access token, fetching user info...');
 
     // Fetch user info from Supabase
     const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', {
@@ -53,6 +54,7 @@ async function handleGoogleSignIn() {
       }
     });
     const user = await userRes.json();
+    console.log('[LB] User response:', JSON.stringify(user).substring(0, 200));
     const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
 
     await chrome.storage.local.set({
@@ -62,8 +64,10 @@ async function handleGoogleSignIn() {
       lb_user_name: name
     });
 
+    console.log('[LB] Saved to storage. User:', name, 'ID:', user.id);
     return { success: true, name };
   } catch (e) {
+    console.error('[LB] OAuth error:', e);
     return { error: e.message || 'Sign-in cancelled' };
   }
 }
