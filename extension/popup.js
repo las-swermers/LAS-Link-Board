@@ -2,10 +2,23 @@ const SUPABASE_URL = 'https://pmhoeqxuamvqlwsatozu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtaG9lcXh1YW12cWx3c2F0b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MTY2NDYsImV4cCI6MjA4ODM5MjY0Nn0.ktaozIz1XrIUeUrPjtKp3VZ92BptG8xehOFsv_ny12w';
 
 async function init() {
-  const stored = await chrome.storage.local.get([
-    'lb_token', 'lb_user_id', 'lb_user_name',
-    'lb_auth_error', 'lb_auth_pending'
-  ]);
+  const stored = await chrome.storage.local.get(null); // Get ALL storage keys
+
+  // Show debug info — dump all lb_ keys so we can see what the background saved
+  const debugEl = document.getElementById('debugInfo');
+  const lbKeys = Object.keys(stored).filter(k => k.startsWith('lb_'));
+  if (lbKeys.length > 0 || stored.lb_auth_error) {
+    const debugLines = lbKeys.map(k => {
+      const v = stored[k];
+      if (typeof v === 'string' && v.length > 40) return k + ': ' + v.substring(0, 40) + '…';
+      return k + ': ' + JSON.stringify(v);
+    });
+    debugEl.textContent = 'Storage: ' + debugLines.join(' | ');
+    debugEl.style.display = 'block';
+  } else {
+    debugEl.textContent = 'Storage: (empty — no lb_ keys found)';
+    debugEl.style.display = 'block';
+  }
 
   // Show any error from background OAuth attempt
   if (stored.lb_auth_error) {
@@ -19,10 +32,8 @@ async function init() {
   } else if (stored.lb_auth_pending) {
     // OAuth is still in progress in the background worker
     document.getElementById('loginSection').style.display = 'block';
-    document.getElementById('googleBtn').textContent = 'Signing in… (complete in the popup)';
+    document.getElementById('googleBtn').textContent = 'Signing in…';
     document.getElementById('googleBtn').disabled = true;
-
-    // Poll storage for completion (background worker will write the token)
     pollForAuth();
   } else {
     document.getElementById('loginSection').style.display = 'block';
@@ -67,9 +78,6 @@ function pollForAuth() {
 // ── Google OAuth — trigger background worker then popup will close ──
 document.getElementById('googleBtn').addEventListener('click', () => {
   document.getElementById('loginError').style.display = 'none';
-  // Send message to background worker — popup will close, that's OK
-  // Background worker handles the full OAuth flow and saves to storage
-  // Next time user opens popup, init() will find the stored credentials
   chrome.runtime.sendMessage({ action: 'googleSignIn' });
 });
 
