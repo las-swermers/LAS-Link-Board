@@ -4,21 +4,17 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 async function init() {
   const stored = await chrome.storage.local.get(null); // Get ALL storage keys
 
-  // Show debug info — dump all lb_ keys so we can see what the background saved
+  // Show debug info from background worker
   const debugEl = document.getElementById('debugInfo');
-  const lbKeys = Object.keys(stored).filter(k => k.startsWith('lb_'));
-  if (lbKeys.length > 0 || stored.lb_auth_error) {
-    const debugLines = lbKeys.map(k => {
-      const v = stored[k];
-      if (typeof v === 'string' && v.length > 40) return k + ': ' + v.substring(0, 40) + '…';
-      return k + ': ' + JSON.stringify(v);
-    });
-    debugEl.textContent = 'Storage: ' + debugLines.join(' | ');
-    debugEl.style.display = 'block';
-  } else {
-    debugEl.textContent = 'Storage: (empty — no lb_ keys found)';
-    debugEl.style.display = 'block';
-  }
+  const debugLog = stored.lb_debug || '';
+  const lbKeys = Object.keys(stored).filter(k => k.startsWith('lb_') && k !== 'lb_debug');
+  const keysSummary = lbKeys.map(k => {
+    const v = stored[k];
+    if (typeof v === 'string' && v.length > 30) return k + '=(' + v.length + ' chars)';
+    return k + '=' + JSON.stringify(v);
+  }).join(' | ');
+  debugEl.textContent = (debugLog ? debugLog + '\n' : '') + 'Keys: ' + (keysSummary || '(none)');
+  debugEl.style.display = 'block';
 
   // Show any error from background OAuth attempt
   if (stored.lb_auth_error) {
