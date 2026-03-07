@@ -27,14 +27,28 @@ document.getElementById('googleBtn').addEventListener('click', async () => {
       interactive: true
     });
 
-    // Supabase returns tokens in the URL hash fragment
-    const hash = new URL(responseUrl).hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
+    // Supabase may return tokens in the hash fragment or query params
+    const url = new URL(responseUrl);
+    const hash = url.hash.substring(1);
+    const params = new URLSearchParams(hash || url.search);
+    let accessToken = params.get('access_token');
+    let refreshToken = params.get('refresh_token');
+
+    // If Supabase returned a code instead of a token, exchange it
+    const code = params.get('code');
+    if (!accessToken && code) {
+      const tokenRes = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=pkce', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        body: JSON.stringify({ auth_code: code, code_verifier: '' })
+      });
+      const tokenData = await tokenRes.json();
+      accessToken = tokenData.access_token;
+      refreshToken = tokenData.refresh_token;
+    }
 
     if (!accessToken) {
-      errEl.textContent = 'Google sign-in failed — no token received';
+      errEl.textContent = 'Sign-in failed — no token received. Response: ' + responseUrl.substring(0, 200);
       errEl.style.display = 'block';
       return;
     }
@@ -58,7 +72,7 @@ document.getElementById('googleBtn').addEventListener('click', async () => {
 
     showMain(name);
   } catch (e) {
-    errEl.textContent = 'Google sign-in was cancelled';
+    errEl.textContent = 'Sign-in error: ' + (e.message || 'cancelled');
     errEl.style.display = 'block';
   }
 });
