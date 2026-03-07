@@ -1,6 +1,6 @@
 // LAS LinkBoard Tracker — Gmail content script
 // Adds a Mailsuite-style tracking toggle next to Send in Gmail compose windows
-// Tracking is ON by default — auto-injects pixel when Send is clicked
+// Tracking default is controlled by lb_track_default setting (off by default)
 
 const SUPABASE_URL = 'https://pmhoeqxuamvqlwsatozu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtaG9lcXh1YW12cWx3c2F0b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MTY2NDYsImV4cCI6MjA4ODM5MjY0Nn0.ktaozIz1XrIUeUrPjtKp3VZ92BptG8xehOFsv_ny12w';
@@ -23,11 +23,15 @@ function observeCompose() {
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
-function injectToggle(toolbar, sendBtn) {
+async function injectToggle(toolbar, sendBtn) {
+  // Read default tracking preference from storage (default: off)
+  const stored = await chrome.storage.local.get(['lb_track_default']);
+  const defaultOn = stored.lb_track_default === true;
+
   // Create the toggle element
   const toggle = document.createElement('div');
   toggle.className = 'lb-track-toggle';
-  toggle.dataset.tracking = 'on'; // ON by default
+  toggle.dataset.tracking = defaultOn ? 'on' : 'off';
   toggle.title = 'LinkBoard: Track email opens';
   toggle.innerHTML = `
     <span class="lb-dot"></span>
