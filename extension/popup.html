@@ -52,6 +52,19 @@ h2 { font-size: 14px; font-weight: 800; margin-bottom: 12px; }
 }
 .camp-del:hover { background: #fee; }
 .camp-loading { font-size: 10px; color: #999; padding: 8px 0; }
+.lb-popup-switch {
+  position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; margin-left: 8px;
+}
+.lb-popup-switch input { opacity: 0; width: 0; height: 0; }
+.lb-popup-slider {
+  position: absolute; cursor: pointer; inset: 0; background: #dadce0; border-radius: 10px; transition: 0.2s;
+}
+.lb-popup-slider::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: 0.2s;
+}
+.lb-popup-switch input:checked + .lb-popup-slider { background: #C5993E; }
+.lb-popup-switch input:checked + .lb-popup-slider::after { transform: translateX(16px); }
 </style>
 </head>
 <body>
@@ -78,7 +91,13 @@ h2 { font-size: 14px; font-weight: 800; margin-bottom: 12px; }
 
   <div id="mainSection">
     <p class="status ok" id="userInfo"></p>
-    <p class="info" style="margin-bottom:12px">Tracking is <strong>on by default</strong> for new emails. Toggle the switch next to Send in Gmail to turn it on or off per email.</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <p class="info" style="margin:0" id="defaultInfo">Tracking is <strong>off by default</strong>. Toggle per email next to Send.</p>
+      <label class="lb-popup-switch" title="Track new emails by default">
+        <input type="checkbox" id="defaultToggle">
+        <span class="lb-popup-slider"></span>
+      </label>
+    </div>
     <div class="divider"></div>
     <p class="info">View your stats in the <a href="https://las-link-board.vercel.app" target="_blank" style="color:#C5993E;font-weight:600">LinkBoard dashboard</a> under Campaigns.</p>
     <div class="divider"></div>

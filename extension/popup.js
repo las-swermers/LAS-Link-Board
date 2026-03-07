@@ -108,11 +108,31 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   document.getElementById('loginSection').style.display = 'block';
 });
 
-function showMain(name) {
+async function showMain(name) {
   document.getElementById('loginSection').style.display = 'none';
   document.getElementById('mainSection').style.display = 'block';
   document.getElementById('userInfo').textContent = 'Signed in as ' + name;
+
+  // Load default tracking preference
+  const stored = await chrome.storage.local.get(['lb_track_default']);
+  const defaultOn = stored.lb_track_default === true;
+  const toggle = document.getElementById('defaultToggle');
+  toggle.checked = defaultOn;
+  updateDefaultLabel(defaultOn);
+
+  toggle.addEventListener('change', async () => {
+    await chrome.storage.local.set({ lb_track_default: toggle.checked });
+    updateDefaultLabel(toggle.checked);
+  });
+
   loadCampaigns();
+}
+
+function updateDefaultLabel(isOn) {
+  const info = document.getElementById('defaultInfo');
+  info.innerHTML = isOn
+    ? 'Tracking is <strong>on by default</strong>. Toggle per email next to Send.'
+    : 'Tracking is <strong>off by default</strong>. Toggle per email next to Send.';
 }
 
 async function loadCampaigns() {
