@@ -3,8 +3,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 async function init() {
   const stored = await chrome.storage.local.get([
-    'lb_token', 'lb_user_id', 'lb_user_name',
-    'lb_auth_error', 'lb_auth_pending'
+    'lb_token', 'lb_user_id', 'lb_user_name', 'lb_auth_pending', 'lb_auth_error'
   ]);
 
   // Show any error from background OAuth attempt
@@ -19,10 +18,8 @@ async function init() {
   } else if (stored.lb_auth_pending) {
     // OAuth is still in progress in the background worker
     document.getElementById('loginSection').style.display = 'block';
-    document.getElementById('googleBtn').textContent = 'Signing in… (complete in the popup)';
+    document.getElementById('googleBtn').textContent = 'Signing in…';
     document.getElementById('googleBtn').disabled = true;
-
-    // Poll storage for completion (background worker will write the token)
     pollForAuth();
   } else {
     document.getElementById('loginSection').style.display = 'block';
@@ -67,9 +64,6 @@ function pollForAuth() {
 // ── Google OAuth — trigger background worker then popup will close ──
 document.getElementById('googleBtn').addEventListener('click', () => {
   document.getElementById('loginError').style.display = 'none';
-  // Send message to background worker — popup will close, that's OK
-  // Background worker handles the full OAuth flow and saves to storage
-  // Next time user opens popup, init() will find the stored credentials
   chrome.runtime.sendMessage({ action: 'googleSignIn' });
 });
 

@@ -3,108 +3,153 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 console.log('[LB] Background service worker loaded');
 
+function debugLog(msg) {
+  console.log('[LB]', msg);
+}
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'googleSignIn') {
-    console.log('[LB] Received googleSignIn message');
+    debugLog('Received googleSignIn message');
     handleGoogleSignIn();
     sendResponse({ started: true });
   }
   return true;
 });
 
+// ── PKCE Helpers ──
+
+function generateRandomString(length) {
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, b => b.toString(16).padStart(2, '0')).join('').slice(0, length);
+}
+
+async function sha256(plain) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  return await crypto.subtle.digest('SHA-256', data);
+}
+
+function base64urlencode(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  let str = '';
+  for (const b of bytes) str += String.fromCharCode(b);
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// ── Main OAuth Flow ──
+
 async function handleGoogleSignIn() {
-  // Clear any previous error/status
-  await chrome.storage.local.remove(['lb_auth_error']);
-  await chrome.storage.local.set({ lb_auth_pending: true });
-
-  const redirectUrl = chrome.identity.getRedirectURL();
-  console.log('[LB] Redirect URL:', redirectUrl);
-  console.log('[LB] ↑ Make sure this EXACT URL is in Supabase → Auth → URL Configuration → Redirect URLs');
-
-  // Build the OAuth URL with proper scopes
-  const params = new URLSearchParams({
-    provider: 'google',
-    redirect_to: redirectUrl,
-    scopes: 'openid email profile',
-    // Force implicit flow to get tokens directly in the URL fragment
-    response_type: 'token',
-    // Skip the Supabase consent screen
-    skip_http_redirect: 'true'
-  });
-
-  const authUrl = SUPABASE_URL + '/auth/v1/authorize?' + params.toString();
-  console.log('[LB] Auth URL:', authUrl);
-  console.log('[LB] Starting launchWebAuthFlow...');
-
   try {
-    const responseUrl = await chrome.identity.launchWebAuthFlow({
-      url: authUrl,
-      interactive: true
+    await chrome.storage.local.remove(['lb_auth_error']);
+    await chrome.storage.local.set({ lb_auth_pending: true });
+
+    const redirectUrl = chrome.identity.getRedirectURL();
+    debugLog('Redirect URL: ' + redirectUrl);
+
+    // Generate PKCE
+    const codeVerifier = generateRandomString(64);
+    const codeChallenge = base64urlencode(await sha256(codeVerifier));
+    debugLog('PKCE generated');
+
+    const params = new URLSearchParams({
+      provider: 'google',
+      redirect_to: redirectUrl,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+      scopes: 'openid email profile'
     });
 
-    console.log('[LB] Got response URL:', responseUrl);
-    console.log('[LB] Response URL length:', responseUrl?.length);
+    const authUrl = SUPABASE_URL + '/auth/v1/authorize?' + params.toString();
+    debugLog('Launching auth flow...');
 
-    if (!responseUrl) {
-      throw new Error('No response URL returned from launchWebAuthFlow');
-    }
+    // Use callback style — more reliable in MV3 service workers
+    chrome.identity.launchWebAuthFlow(
+      { url: authUrl, interactive: true },
+      async (responseUrl) => {
+        try {
+          if (chrome.runtime.lastError) {
+            const errMsg = chrome.runtime.lastError.message || 'Unknown error';
+            debugLog('launchWebAuthFlow error: ' + errMsg);
+            if (!errMsg.includes('user did not approve') && !errMsg.includes('cancel')) {
+              await chrome.storage.local.set({ lb_auth_error: errMsg });
+            }
+            await chrome.storage.local.set({ lb_auth_pending: false });
+            return;
+          }
 
-    // Parse tokens — Supabase puts them in the hash fragment for implicit flow
-    const url = new URL(responseUrl);
-    const hashParams = new URLSearchParams(url.hash.substring(1));
-    const queryParams = new URLSearchParams(url.search);
+          if (!responseUrl) {
+            debugLog('ERROR: No response URL');
+            await chrome.storage.local.set({ lb_auth_error: 'No response URL', lb_auth_pending: false });
+            return;
+          }
 
-    // Log what we got for debugging
-    console.log('[LB] Hash fragment keys:', [...hashParams.keys()].join(', '));
-    console.log('[LB] Query param keys:', [...queryParams.keys()].join(', '));
+          debugLog('Got response URL (' + responseUrl.length + ' chars)');
 
-    const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+          const url = new URL(responseUrl);
+          const hashParams = new URLSearchParams(url.hash.substring(1));
+          const queryParams = new URLSearchParams(url.search);
 
-    // If Supabase returned an authorization code instead (PKCE flow), exchange it
-    const code = queryParams.get('code') || hashParams.get('code');
-    if (!accessToken && code) {
-      console.log('[LB] Got authorization code, exchanging for tokens (PKCE)...');
-      return await exchangeCodeForTokens(code);
-    }
+          debugLog('Hash keys: ' + ([...hashParams.keys()].join(',') || 'none') +
+                        ' | Query keys: ' + ([...queryParams.keys()].join(',') || 'none'));
 
-    // Check for error in the response
-    const error = hashParams.get('error') || queryParams.get('error');
-    const errorDesc = hashParams.get('error_description') || queryParams.get('error_description');
-    if (error) {
-      throw new Error('OAuth error: ' + error + ' — ' + (errorDesc || 'no description'));
-    }
+          // Check for error
+          const error = hashParams.get('error') || queryParams.get('error');
+          if (error) {
+            const desc = hashParams.get('error_description') || queryParams.get('error_description') || '';
+            debugLog('OAuth error: ' + error + ' ' + desc);
+            await chrome.storage.local.set({ lb_auth_error: error + ': ' + desc, lb_auth_pending: false });
+            return;
+          }
 
-    if (!accessToken) {
-      const errMsg = 'No access_token in response. Hash: ' + url.hash.substring(0, 200) + ' | Search: ' + url.search.substring(0, 200);
-      console.error('[LB]', errMsg);
-      await chrome.storage.local.set({ lb_auth_error: errMsg, lb_auth_pending: false });
-      return;
-    }
+          // Try implicit flow token first
+          const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+          if (accessToken) {
+            debugLog('Got access_token directly');
+            const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+            await saveSessionFromToken(accessToken, refreshToken);
+            return;
+          }
 
-    console.log('[LB] Got access token (' + accessToken.length + ' chars), fetching user info...');
-    await saveSessionFromToken(accessToken, refreshToken);
+          // PKCE flow — exchange code
+          const code = queryParams.get('code') || hashParams.get('code');
+          if (code) {
+            debugLog('Got auth code, exchanging...');
+            await exchangeCodeForTokens(code, codeVerifier);
+            return;
+          }
 
+          // Nothing useful
+          debugLog('ERROR: No token/code. URL: ' + responseUrl.substring(0, 300));
+          await chrome.storage.local.set({
+            lb_auth_error: 'No token or code in callback URL',
+            lb_auth_pending: false
+          });
+
+        } catch (innerErr) {
+          debugLog('Callback error: ' + (innerErr.message || innerErr));
+          await chrome.storage.local.set({
+            lb_auth_error: innerErr.message || 'Callback processing failed',
+            lb_auth_pending: false
+          });
+        }
+      }
+    );
   } catch (e) {
-    console.error('[LB] OAuth error:', e.message || e);
-    // "The user did not approve access" = user closed the window, not a real error
-    const isUserCancel = (e.message || '').includes('user did not approve')
-                      || (e.message || '').includes('canceled')
-                      || (e.message || '').includes('cancelled');
-    if (isUserCancel) {
-      console.log('[LB] User cancelled sign-in, no error stored');
-    } else {
-      await chrome.storage.local.set({ lb_auth_error: e.message || 'Sign-in failed' });
-    }
-    await chrome.storage.local.set({ lb_auth_pending: false });
+    debugLog('handleGoogleSignIn error: ' + (e.message || e));
+    await chrome.storage.local.set({
+      lb_auth_error: e.message || 'Sign-in failed',
+      lb_auth_pending: false
+    });
   }
 }
 
-// Exchange an authorization code for tokens (PKCE flow)
-async function exchangeCodeForTokens(code) {
+async function exchangeCodeForTokens(code, codeVerifier) {
   try {
-    const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=authorization_code', {
+    debugLog('POST /auth/v1/token...');
+
+    const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=pkce', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -112,30 +157,31 @@ async function exchangeCodeForTokens(code) {
       },
       body: JSON.stringify({
         auth_code: code,
-        code_verifier: '' // Supabase may not require this for the implicit-to-code fallback
+        code_verifier: codeVerifier
       })
     });
 
     const data = await res.json();
-    console.log('[LB] Token exchange response status:', res.status);
+    debugLog('Token exchange: ' + res.status + ' keys=' + Object.keys(data).join(','));
 
     if (!res.ok || !data.access_token) {
-      const errMsg = 'Token exchange failed: ' + (data.error_description || data.error || JSON.stringify(data).substring(0, 200));
-      console.error('[LB]', errMsg);
-      await chrome.storage.local.set({ lb_auth_error: errMsg, lb_auth_pending: false });
+      const errMsg = data.error_description || data.error || data.msg || JSON.stringify(data).substring(0, 200);
+      debugLog('Token exchange failed: ' + errMsg);
+      await chrome.storage.local.set({ lb_auth_error: 'Token exchange: ' + errMsg, lb_auth_pending: false });
       return;
     }
 
     await saveSessionFromToken(data.access_token, data.refresh_token);
   } catch (e) {
-    console.error('[LB] Token exchange error:', e);
+    debugLog('Token exchange error: ' + (e.message || e));
     await chrome.storage.local.set({ lb_auth_error: e.message || 'Token exchange failed', lb_auth_pending: false });
   }
 }
 
-// Fetch user info and save session to chrome.storage.local
 async function saveSessionFromToken(accessToken, refreshToken) {
   try {
+    debugLog('Fetching user info...');
+
     const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', {
       headers: {
         'apikey': SUPABASE_ANON,
@@ -145,12 +191,10 @@ async function saveSessionFromToken(accessToken, refreshToken) {
 
     if (!userRes.ok) {
       const body = await userRes.text();
-      throw new Error('User fetch failed (' + userRes.status + '): ' + body.substring(0, 200));
+      throw new Error('User fetch ' + userRes.status + ': ' + body.substring(0, 150));
     }
 
     const user = await userRes.json();
-    console.log('[LB] User response:', JSON.stringify(user).substring(0, 300));
-
     const name = user.user_metadata?.full_name
               || user.user_metadata?.name
               || user.email?.split('@')[0]
@@ -164,9 +208,9 @@ async function saveSessionFromToken(accessToken, refreshToken) {
       lb_auth_pending: false
     });
 
-    console.log('[LB] SUCCESS — saved to storage. User:', name, '| ID:', user.id);
+    debugLog('SUCCESS! User: ' + name);
   } catch (e) {
-    console.error('[LB] Save session error:', e);
-    await chrome.storage.local.set({ lb_auth_error: e.message || 'Failed to fetch user info', lb_auth_pending: false });
+    debugLog('saveSession error: ' + (e.message || e));
+    await chrome.storage.local.set({ lb_auth_error: e.message || 'Failed to save session', lb_auth_pending: false });
   }
 }
