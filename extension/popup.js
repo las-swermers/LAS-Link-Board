@@ -2,7 +2,15 @@ const SUPABASE_URL = 'https://pmhoeqxuamvqlwsatozu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtaG9lcXh1YW12cWx3c2F0b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MTY2NDYsImV4cCI6MjA4ODM5MjY0Nn0.ktaozIz1XrIUeUrPjtKp3VZ92BptG8xehOFsv_ny12w';
 
 async function init() {
-  const stored = await chrome.storage.local.get(['lb_token', 'lb_user_id', 'lb_user_name']);
+  const stored = await chrome.storage.local.get(['lb_token', 'lb_user_id', 'lb_user_name', 'lb_auth_error']);
+
+  // Show any error from background OAuth attempt
+  if (stored.lb_auth_error) {
+    document.getElementById('loginError').textContent = stored.lb_auth_error;
+    document.getElementById('loginError').style.display = 'block';
+    await chrome.storage.local.remove(['lb_auth_error']);
+  }
+
   if (stored.lb_token && stored.lb_user_id) {
     showMain(stored.lb_user_name || 'User');
   } else {
@@ -10,22 +18,13 @@ async function init() {
   }
 }
 
-// ── Google OAuth (delegated to background service worker) ──
-document.getElementById('googleBtn').addEventListener('click', async () => {
-  const errEl = document.getElementById('loginError');
-  errEl.style.display = 'none';
-
-  // Delegate to background script so the flow survives popup closing
-  chrome.runtime.sendMessage({ action: 'googleSignIn' }, (response) => {
-    // If popup was closed during auth and reopened, response may be undefined
-    if (chrome.runtime.lastError || !response) return;
-    if (response.error) {
-      errEl.textContent = 'Sign-in error: ' + response.error;
-      errEl.style.display = 'block';
-    } else if (response.success) {
-      showMain(response.name);
-    }
-  });
+// ── Google OAuth — trigger background worker then popup will close ──
+document.getElementById('googleBtn').addEventListener('click', () => {
+  document.getElementById('loginError').style.display = 'none';
+  // Send message to background worker — popup will close, that's OK
+  // Background worker handles the full OAuth flow and saves to storage
+  // Next time user opens popup, init() will find the stored credentials
+  chrome.runtime.sendMessage({ action: 'googleSignIn' });
 });
 
 // ── Email/Password login ──

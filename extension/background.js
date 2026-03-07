@@ -1,19 +1,32 @@
 const SUPABASE_URL = 'https://pmhoeqxuamvqlwsatozu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtaG9lcXh1YW12cWx3c2F0b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MTY2NDYsImV4cCI6MjA4ODM5MjY0Nn0.ktaozIz1XrIUeUrPjtKp3VZ92BptG8xehOFsv_ny12w';
 
+console.log('[LB] Background service worker loaded');
+
+// Listen for messages from popup
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'googleSignIn') {
-    handleGoogleSignIn().then(sendResponse);
-    return true; // keep channel open for async response
+    console.log('[LB] Received googleSignIn message');
+    handleGoogleSignIn();
+    sendResponse({ started: true });
   }
+  return true;
 });
 
 async function handleGoogleSignIn() {
+  // Clear any previous error
+  await chrome.storage.local.remove(['lb_auth_error']);
+
   const redirectUrl = chrome.identity.getRedirectURL();
+  console.log('[LB] Redirect URL:', redirectUrl);
+
   const authUrl = SUPABASE_URL + '/auth/v1/authorize?' + new URLSearchParams({
     provider: 'google',
-    redirect_to: redirectUrl
+    redirect_to: redirectUrl,
+    response_type: 'token'
   }).toString();
+
+  console.log('[LB] Starting launchWebAuthFlow...');
 
   try {
     const responseUrl = await chrome.identity.launchWebAuthFlow({
@@ -21,31 +34,25 @@ async function handleGoogleSignIn() {
       interactive: true
     });
 
-    // Supabase may return tokens in the hash fragment or query params
-    const url = new URL(responseUrl);
-    const hash = url.hash.substring(1);
-    const params = new URLSearchParams(hash || url.search);
-    let accessToken = params.get('access_token');
-    let refreshToken = params.get('refresh_token');
+    console.log('[LB] Got response URL:', responseUrl);
 
-    // If Supabase returned a code instead of a token, exchange it
-    const code = params.get('code');
-    if (!accessToken && code) {
-      const tokenRes = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=pkce', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({ auth_code: code, code_verifier: '' })
-      });
-      const tokenData = await tokenRes.json();
-      accessToken = tokenData.access_token;
-      refreshToken = tokenData.refresh_token;
-    }
+    // Parse tokens from hash fragment or query params
+    const url = new URL(responseUrl);
+    const hashParams = new URLSearchParams(url.hash.substring(1));
+    const queryParams = new URLSearchParams(url.search);
+
+    const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
 
     if (!accessToken) {
-      return { error: 'No token received. Response: ' + responseUrl.substring(0, 200) };
+      const errMsg = 'No token in response. URL: ' + responseUrl.substring(0, 300);
+      console.error('[LB]', errMsg);
+      await chrome.storage.local.set({ lb_auth_error: errMsg });
+      return;
     }
 
-    // Fetch user info from Supabase
+    console.log('[LB] Got access token, fetching user info...');
+
     const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', {
       headers: {
         'apikey': SUPABASE_ANON,
@@ -53,6 +60,8 @@ async function handleGoogleSignIn() {
       }
     });
     const user = await userRes.json();
+    console.log('[LB] User:', JSON.stringify(user).substring(0, 200));
+
     const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
 
     await chrome.storage.local.set({
@@ -62,8 +71,9 @@ async function handleGoogleSignIn() {
       lb_user_name: name
     });
 
-    return { success: true, name };
+    console.log('[LB] SUCCESS - saved to storage. User:', name);
   } catch (e) {
-    return { error: e.message || 'Sign-in cancelled' };
+    console.error('[LB] OAuth error:', e);
+    await chrome.storage.local.set({ lb_auth_error: e.message || 'Sign-in failed' });
   }
 }
