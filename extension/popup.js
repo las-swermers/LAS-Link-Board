@@ -4,7 +4,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 async function init() {
   const stored = await chrome.storage.local.get(['lb_token', 'lb_user_id', 'lb_user_name', 'lb_auth_error']);
 
-  // Check if there was an error from background OAuth
+  // Show any error from a previous OAuth attempt
   if (stored.lb_auth_error) {
     document.getElementById('loginError').textContent = stored.lb_auth_error;
     document.getElementById('loginError').style.display = 'block';
@@ -18,19 +18,64 @@ async function init() {
   }
 }
 
-// Listen for storage changes — if background worker saves credentials while popup is open
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.lb_token && changes.lb_token.newValue) {
-    const name = changes.lb_user_name?.newValue || 'User';
-    showMain(name);
-  }
-});
+// ── Google OAuth — done directly in popup ──
+document.getElementById('googleBtn').addEventListener('click', async () => {
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
 
-// ── Google OAuth (delegated to background service worker) ──
-document.getElementById('googleBtn').addEventListener('click', () => {
-  document.getElementById('loginError').style.display = 'none';
-  // Tell background to start OAuth — popup will likely close
-  chrome.runtime.sendMessage({ action: 'googleSignIn' });
+  const redirectUrl = chrome.identity.getRedirectURL();
+
+  const authUrl = SUPABASE_URL + '/auth/v1/authorize?' + new URLSearchParams({
+    provider: 'google',
+    redirect_to: redirectUrl,
+    response_type: 'token'
+  }).toString();
+
+  try {
+    const responseUrl = await chrome.identity.launchWebAuthFlow({
+      url: authUrl,
+      interactive: true
+    });
+
+    // Parse tokens from hash or query
+    const url = new URL(responseUrl);
+    const hashParams = new URLSearchParams(url.hash.substring(1));
+    const queryParams = new URLSearchParams(url.search);
+
+    const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+
+    if (!accessToken) {
+      errEl.textContent = 'No token received. Debug: ' + responseUrl.substring(0, 200);
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // Fetch user info
+    const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + accessToken
+      }
+    });
+    const user = await userRes.json();
+    const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+
+    await chrome.storage.local.set({
+      lb_token: accessToken,
+      lb_refresh: refreshToken,
+      lb_user_id: user.id,
+      lb_user_name: name
+    });
+
+    showMain(name);
+  } catch (e) {
+    // If popup stayed open, show error. If not, save for next open.
+    const msg = e.message || 'Sign-in cancelled or failed';
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    await chrome.storage.local.set({ lb_auth_error: msg });
+  }
 });
 
 // ── Email/Password login ──
