@@ -2,7 +2,10 @@ const SUPABASE_URL = 'https://pmhoeqxuamvqlwsatozu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtaG9lcXh1YW12cWx3c2F0b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MTY2NDYsImV4cCI6MjA4ODM5MjY0Nn0.ktaozIz1XrIUeUrPjtKp3VZ92BptG8xehOFsv_ny12w';
 
 async function init() {
-  const stored = await chrome.storage.local.get(['lb_token', 'lb_user_id', 'lb_user_name', 'lb_auth_error']);
+  const stored = await chrome.storage.local.get([
+    'lb_token', 'lb_user_id', 'lb_user_name',
+    'lb_auth_error', 'lb_auth_pending'
+  ]);
 
   // Show any error from background OAuth attempt
   if (stored.lb_auth_error) {
@@ -13,9 +16,52 @@ async function init() {
 
   if (stored.lb_token && stored.lb_user_id) {
     showMain(stored.lb_user_name || 'User');
+  } else if (stored.lb_auth_pending) {
+    // OAuth is still in progress in the background worker
+    document.getElementById('loginSection').style.display = 'block';
+    document.getElementById('googleBtn').textContent = 'Signing in… (complete in the popup)';
+    document.getElementById('googleBtn').disabled = true;
+
+    // Poll storage for completion (background worker will write the token)
+    pollForAuth();
   } else {
     document.getElementById('loginSection').style.display = 'block';
   }
+}
+
+// Poll storage while OAuth is in progress in the background
+function pollForAuth() {
+  let attempts = 0;
+  const maxAttempts = 60; // 30 seconds
+  const interval = setInterval(async () => {
+    attempts++;
+    const stored = await chrome.storage.local.get([
+      'lb_token', 'lb_user_id', 'lb_user_name',
+      'lb_auth_error', 'lb_auth_pending'
+    ]);
+
+    if (stored.lb_token && stored.lb_user_id) {
+      clearInterval(interval);
+      showMain(stored.lb_user_name || 'User');
+      return;
+    }
+
+    if (stored.lb_auth_error) {
+      clearInterval(interval);
+      document.getElementById('loginError').textContent = stored.lb_auth_error;
+      document.getElementById('loginError').style.display = 'block';
+      document.getElementById('googleBtn').textContent = 'Sign in with Google';
+      document.getElementById('googleBtn').disabled = false;
+      await chrome.storage.local.remove(['lb_auth_error']);
+      return;
+    }
+
+    if (!stored.lb_auth_pending || attempts >= maxAttempts) {
+      clearInterval(interval);
+      document.getElementById('googleBtn').textContent = 'Sign in with Google';
+      document.getElementById('googleBtn').disabled = false;
+    }
+  }, 500);
 }
 
 // ── Google OAuth — trigger background worker then popup will close ──
@@ -60,7 +106,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
 
 // ── Logout ──
 document.getElementById('logoutBtn').addEventListener('click', async () => {
-  await chrome.storage.local.remove(['lb_token', 'lb_refresh', 'lb_user_id', 'lb_user_name']);
+  await chrome.storage.local.remove(['lb_token', 'lb_refresh', 'lb_user_id', 'lb_user_name', 'lb_auth_pending']);
   document.getElementById('mainSection').style.display = 'none';
   document.getElementById('loginSection').style.display = 'block';
 });
