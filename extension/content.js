@@ -33,7 +33,31 @@ function injectToggle(toolbar, sendBtn) {
     <span class="lb-dot"></span>
     <span class="lb-switch"></span>
     <span class="lb-label">Track</span>
+    <span class="lb-recipient"></span>
   `;
+
+  // Watch the To field and show recipient next to Track
+  const dialog = sendBtn.closest('div[role="dialog"]') || sendBtn.closest('.AD');
+  if (dialog) {
+    const updateRecipient = () => {
+      const toChips = dialog.querySelectorAll('div[name="to"] .afV, div[name="to"] [data-hovercard-id], span[email]');
+      const recipientEl = toggle.querySelector('.lb-recipient');
+      if (toChips.length === 1) {
+        const email = toChips[0].getAttribute('email') || toChips[0].getAttribute('data-hovercard-id') || toChips[0].textContent.trim();
+        recipientEl.textContent = email;
+      } else if (toChips.length > 1) {
+        recipientEl.textContent = toChips.length + ' recipients';
+      } else {
+        recipientEl.textContent = '';
+      }
+    };
+    const toContainer = dialog.querySelector('div[name="to"]') || dialog.querySelector('.aoD.hl');
+    if (toContainer) {
+      new MutationObserver(updateRecipient).observe(toContainer, { childList: true, subtree: true });
+    }
+    // Initial check after short delay (Gmail populates async)
+    setTimeout(updateRecipient, 500);
+  }
 
   // Toggle on/off when clicked
   toggle.addEventListener('click', (e) => {
