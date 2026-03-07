@@ -8,8 +8,24 @@ const PIXEL = Buffer.from(
   'base64'
 );
 
-// Dedup window: ignore duplicate opens from same IP within 5 minutes
+// Dedup window: ignore duplicate opens from same IP within this many minutes
 const DEDUP_MINUTES = 5;
+
+// In-memory dedup cache to handle simultaneous requests from email clients.
+// Key: "campaignId:ipHash", Value: timestamp. Cleaned up periodically.
+const recentOpens = new Map();
+
+function dedupKey(campaignId, ipHash) {
+  return campaignId + ':' + ipHash;
+}
+
+// Clean expired entries every 10 minutes
+setInterval(() => {
+  const cutoff = Date.now() - DEDUP_MINUTES * 60 * 1000;
+  for (const [key, ts] of recentOpens) {
+    if (ts < cutoff) recentOpens.delete(key);
+  }
+}, 10 * 60 * 1000).unref();
 
 module.exports = async function handler(req, res) {
   const { id } = req.query;
@@ -27,29 +43,17 @@ module.exports = async function handler(req, res) {
     const ua = req.headers['user-agent'] || '';
     const ip = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '';
     const ipHash = simpleHash(ip);
+    const key = dedupKey(id, ipHash);
+
+    // In-memory dedup: instant check, no DB race condition
+    const now = Date.now();
+    const lastSeen = recentOpens.get(key);
+    if (lastSeen && (now - lastSeen) < DEDUP_MINUTES * 60 * 1000) {
+      return; // Already logged recently, skip
+    }
+    recentOpens.set(key, now);
 
     try {
-      // Check for recent open from same IP + campaign (dedup)
-      const since = new Date(Date.now() - DEDUP_MINUTES * 60 * 1000).toISOString();
-      const checkRes = await fetch(
-        SUPABASE_URL + '/rest/v1/campaign_opens?campaign_id=eq.' + encodeURIComponent(id) +
-        '&ip_hash=eq.' + encodeURIComponent(ipHash) +
-        '&opened_at=gte.' + encodeURIComponent(since) +
-        '&limit=1',
-        {
-          headers: {
-            'apikey': SUPABASE_ANON,
-            'Authorization': 'Bearer ' + SUPABASE_ANON
-          }
-        }
-      );
-
-      if (checkRes.ok) {
-        const existing = await checkRes.json();
-        if (existing.length > 0) return; // Already logged recently, skip
-      }
-
-      // No recent duplicate — log this open
       await fetch(SUPABASE_URL + '/rest/v1/campaign_opens', {
         method: 'POST',
         headers: {
