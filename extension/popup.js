@@ -2,19 +2,9 @@ const SUPABASE_URL = 'https://pmhoeqxuamvqlwsatozu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtaG9lcXh1YW12cWx3c2F0b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MTY2NDYsImV4cCI6MjA4ODM5MjY0Nn0.ktaozIz1XrIUeUrPjtKp3VZ92BptG8xehOFsv_ny12w';
 
 async function init() {
-  const stored = await chrome.storage.local.get(null); // Get ALL storage keys
-
-  // Show debug info from background worker
-  const debugEl = document.getElementById('debugInfo');
-  const debugLog = stored.lb_debug || '';
-  const lbKeys = Object.keys(stored).filter(k => k.startsWith('lb_') && k !== 'lb_debug');
-  const keysSummary = lbKeys.map(k => {
-    const v = stored[k];
-    if (typeof v === 'string' && v.length > 30) return k + '=(' + v.length + ' chars)';
-    return k + '=' + JSON.stringify(v);
-  }).join(' | ');
-  debugEl.textContent = (debugLog ? debugLog + '\n' : '') + 'Keys: ' + (keysSummary || '(none)');
-  debugEl.style.display = 'block';
+  const stored = await chrome.storage.local.get([
+    'lb_token', 'lb_user_id', 'lb_user_name', 'lb_auth_pending', 'lb_auth_error'
+  ]);
 
   // Show any error from background OAuth attempt
   if (stored.lb_auth_error) {

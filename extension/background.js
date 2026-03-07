@@ -3,20 +3,8 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 console.log('[LB] Background service worker loaded');
 
-// Write to storage so the popup can see debug messages
-async function debugLog(msg) {
+function debugLog(msg) {
   console.log('[LB]', msg);
-  try {
-    const prev = (await chrome.storage.local.get('lb_debug')).lb_debug || '';
-    const line = new Date().toLocaleTimeString() + ' ' + msg;
-    // Keep last 5 messages
-    const lines = prev ? prev.split('\n') : [];
-    lines.push(line);
-    while (lines.length > 5) lines.shift();
-    await chrome.storage.local.set({ lb_debug: lines.join('\n') });
-  } catch (e) {
-    console.error('[LB] debugLog error:', e);
-  }
 }
 
 // Listen for messages from popup
@@ -58,12 +46,12 @@ async function handleGoogleSignIn() {
     await chrome.storage.local.set({ lb_auth_pending: true });
 
     const redirectUrl = chrome.identity.getRedirectURL();
-    await debugLog('Redirect URL: ' + redirectUrl);
+    debugLog('Redirect URL: ' + redirectUrl);
 
     // Generate PKCE
     const codeVerifier = generateRandomString(64);
     const codeChallenge = base64urlencode(await sha256(codeVerifier));
-    await debugLog('PKCE generated');
+    debugLog('PKCE generated');
 
     const params = new URLSearchParams({
       provider: 'google',
@@ -74,7 +62,7 @@ async function handleGoogleSignIn() {
     });
 
     const authUrl = SUPABASE_URL + '/auth/v1/authorize?' + params.toString();
-    await debugLog('Launching auth flow...');
+    debugLog('Launching auth flow...');
 
     // Use callback style — more reliable in MV3 service workers
     chrome.identity.launchWebAuthFlow(
@@ -83,7 +71,7 @@ async function handleGoogleSignIn() {
         try {
           if (chrome.runtime.lastError) {
             const errMsg = chrome.runtime.lastError.message || 'Unknown error';
-            await debugLog('launchWebAuthFlow error: ' + errMsg);
+            debugLog('launchWebAuthFlow error: ' + errMsg);
             if (!errMsg.includes('user did not approve') && !errMsg.includes('cancel')) {
               await chrome.storage.local.set({ lb_auth_error: errMsg });
             }
@@ -92,25 +80,25 @@ async function handleGoogleSignIn() {
           }
 
           if (!responseUrl) {
-            await debugLog('ERROR: No response URL');
+            debugLog('ERROR: No response URL');
             await chrome.storage.local.set({ lb_auth_error: 'No response URL', lb_auth_pending: false });
             return;
           }
 
-          await debugLog('Got response URL (' + responseUrl.length + ' chars)');
+          debugLog('Got response URL (' + responseUrl.length + ' chars)');
 
           const url = new URL(responseUrl);
           const hashParams = new URLSearchParams(url.hash.substring(1));
           const queryParams = new URLSearchParams(url.search);
 
-          await debugLog('Hash keys: ' + ([...hashParams.keys()].join(',') || 'none') +
+          debugLog('Hash keys: ' + ([...hashParams.keys()].join(',') || 'none') +
                         ' | Query keys: ' + ([...queryParams.keys()].join(',') || 'none'));
 
           // Check for error
           const error = hashParams.get('error') || queryParams.get('error');
           if (error) {
             const desc = hashParams.get('error_description') || queryParams.get('error_description') || '';
-            await debugLog('OAuth error: ' + error + ' ' + desc);
+            debugLog('OAuth error: ' + error + ' ' + desc);
             await chrome.storage.local.set({ lb_auth_error: error + ': ' + desc, lb_auth_pending: false });
             return;
           }
@@ -118,7 +106,7 @@ async function handleGoogleSignIn() {
           // Try implicit flow token first
           const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
           if (accessToken) {
-            await debugLog('Got access_token directly');
+            debugLog('Got access_token directly');
             const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
             await saveSessionFromToken(accessToken, refreshToken);
             return;
@@ -127,20 +115,20 @@ async function handleGoogleSignIn() {
           // PKCE flow — exchange code
           const code = queryParams.get('code') || hashParams.get('code');
           if (code) {
-            await debugLog('Got auth code, exchanging...');
+            debugLog('Got auth code, exchanging...');
             await exchangeCodeForTokens(code, codeVerifier);
             return;
           }
 
           // Nothing useful
-          await debugLog('ERROR: No token/code. URL: ' + responseUrl.substring(0, 300));
+          debugLog('ERROR: No token/code. URL: ' + responseUrl.substring(0, 300));
           await chrome.storage.local.set({
             lb_auth_error: 'No token or code in callback URL',
             lb_auth_pending: false
           });
 
         } catch (innerErr) {
-          await debugLog('Callback error: ' + (innerErr.message || innerErr));
+          debugLog('Callback error: ' + (innerErr.message || innerErr));
           await chrome.storage.local.set({
             lb_auth_error: innerErr.message || 'Callback processing failed',
             lb_auth_pending: false
@@ -149,7 +137,7 @@ async function handleGoogleSignIn() {
       }
     );
   } catch (e) {
-    await debugLog('handleGoogleSignIn error: ' + (e.message || e));
+    debugLog('handleGoogleSignIn error: ' + (e.message || e));
     await chrome.storage.local.set({
       lb_auth_error: e.message || 'Sign-in failed',
       lb_auth_pending: false
@@ -159,7 +147,7 @@ async function handleGoogleSignIn() {
 
 async function exchangeCodeForTokens(code, codeVerifier) {
   try {
-    await debugLog('POST /auth/v1/token...');
+    debugLog('POST /auth/v1/token...');
 
     const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=pkce', {
       method: 'POST',
@@ -174,25 +162,25 @@ async function exchangeCodeForTokens(code, codeVerifier) {
     });
 
     const data = await res.json();
-    await debugLog('Token exchange: ' + res.status + ' keys=' + Object.keys(data).join(','));
+    debugLog('Token exchange: ' + res.status + ' keys=' + Object.keys(data).join(','));
 
     if (!res.ok || !data.access_token) {
       const errMsg = data.error_description || data.error || data.msg || JSON.stringify(data).substring(0, 200);
-      await debugLog('Token exchange failed: ' + errMsg);
+      debugLog('Token exchange failed: ' + errMsg);
       await chrome.storage.local.set({ lb_auth_error: 'Token exchange: ' + errMsg, lb_auth_pending: false });
       return;
     }
 
     await saveSessionFromToken(data.access_token, data.refresh_token);
   } catch (e) {
-    await debugLog('Token exchange error: ' + (e.message || e));
+    debugLog('Token exchange error: ' + (e.message || e));
     await chrome.storage.local.set({ lb_auth_error: e.message || 'Token exchange failed', lb_auth_pending: false });
   }
 }
 
 async function saveSessionFromToken(accessToken, refreshToken) {
   try {
-    await debugLog('Fetching user info...');
+    debugLog('Fetching user info...');
 
     const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', {
       headers: {
@@ -220,9 +208,9 @@ async function saveSessionFromToken(accessToken, refreshToken) {
       lb_auth_pending: false
     });
 
-    await debugLog('SUCCESS! User: ' + name);
+    debugLog('SUCCESS! User: ' + name);
   } catch (e) {
-    await debugLog('saveSession error: ' + (e.message || e));
+    debugLog('saveSession error: ' + (e.message || e));
     await chrome.storage.local.set({ lb_auth_error: e.message || 'Failed to save session', lb_auth_pending: false });
   }
 }
