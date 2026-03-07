@@ -10,71 +10,22 @@ async function init() {
   }
 }
 
-// ── Google OAuth ──
+// ── Google OAuth (delegated to background service worker) ──
 document.getElementById('googleBtn').addEventListener('click', async () => {
   const errEl = document.getElementById('loginError');
   errEl.style.display = 'none';
 
-  const redirectUrl = chrome.identity.getRedirectURL();
-  const authUrl = SUPABASE_URL + '/auth/v1/authorize?' + new URLSearchParams({
-    provider: 'google',
-    redirect_to: redirectUrl
-  }).toString();
-
-  try {
-    const responseUrl = await chrome.identity.launchWebAuthFlow({
-      url: authUrl,
-      interactive: true
-    });
-
-    // Supabase may return tokens in the hash fragment or query params
-    const url = new URL(responseUrl);
-    const hash = url.hash.substring(1);
-    const params = new URLSearchParams(hash || url.search);
-    let accessToken = params.get('access_token');
-    let refreshToken = params.get('refresh_token');
-
-    // If Supabase returned a code instead of a token, exchange it
-    const code = params.get('code');
-    if (!accessToken && code) {
-      const tokenRes = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=pkce', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({ auth_code: code, code_verifier: '' })
-      });
-      const tokenData = await tokenRes.json();
-      accessToken = tokenData.access_token;
-      refreshToken = tokenData.refresh_token;
-    }
-
-    if (!accessToken) {
-      errEl.textContent = 'Sign-in failed — no token received. Response: ' + responseUrl.substring(0, 200);
+  // Delegate to background script so the flow survives popup closing
+  chrome.runtime.sendMessage({ action: 'googleSignIn' }, (response) => {
+    // If popup was closed during auth and reopened, response may be undefined
+    if (chrome.runtime.lastError || !response) return;
+    if (response.error) {
+      errEl.textContent = 'Sign-in error: ' + response.error;
       errEl.style.display = 'block';
-      return;
+    } else if (response.success) {
+      showMain(response.name);
     }
-
-    // Fetch user info from Supabase
-    const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', {
-      headers: {
-        'apikey': SUPABASE_ANON,
-        'Authorization': 'Bearer ' + accessToken
-      }
-    });
-    const user = await userRes.json();
-    const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-
-    await chrome.storage.local.set({
-      lb_token: accessToken,
-      lb_refresh: refreshToken,
-      lb_user_id: user.id,
-      lb_user_name: name
-    });
-
-    showMain(name);
-  } catch (e) {
-    errEl.textContent = 'Sign-in error: ' + (e.message || 'cancelled');
-    errEl.style.display = 'block';
-  }
+  });
 });
 
 // ── Email/Password login ──
