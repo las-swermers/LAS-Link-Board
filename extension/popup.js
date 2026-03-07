@@ -10,57 +10,22 @@ async function init() {
   }
 }
 
-// ── Google OAuth ──
+// ── Google OAuth (delegated to background service worker) ──
 document.getElementById('googleBtn').addEventListener('click', async () => {
   const errEl = document.getElementById('loginError');
   errEl.style.display = 'none';
 
-  const redirectUrl = chrome.identity.getRedirectURL();
-  const authUrl = SUPABASE_URL + '/auth/v1/authorize?' + new URLSearchParams({
-    provider: 'google',
-    redirect_to: redirectUrl
-  }).toString();
-
-  try {
-    const responseUrl = await chrome.identity.launchWebAuthFlow({
-      url: authUrl,
-      interactive: true
-    });
-
-    // Supabase returns tokens in the URL hash fragment
-    const hash = new URL(responseUrl).hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-
-    if (!accessToken) {
-      errEl.textContent = 'Google sign-in failed — no token received';
+  // Delegate to background script so the flow survives popup closing
+  chrome.runtime.sendMessage({ action: 'googleSignIn' }, (response) => {
+    // If popup was closed during auth and reopened, response may be undefined
+    if (chrome.runtime.lastError || !response) return;
+    if (response.error) {
+      errEl.textContent = 'Sign-in error: ' + response.error;
       errEl.style.display = 'block';
-      return;
+    } else if (response.success) {
+      showMain(response.name);
     }
-
-    // Fetch user info from Supabase
-    const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', {
-      headers: {
-        'apikey': SUPABASE_ANON,
-        'Authorization': 'Bearer ' + accessToken
-      }
-    });
-    const user = await userRes.json();
-    const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-
-    await chrome.storage.local.set({
-      lb_token: accessToken,
-      lb_refresh: refreshToken,
-      lb_user_id: user.id,
-      lb_user_name: name
-    });
-
-    showMain(name);
-  } catch (e) {
-    errEl.textContent = 'Google sign-in was cancelled';
-    errEl.style.display = 'block';
-  }
+  });
 });
 
 // ── Email/Password login ──
