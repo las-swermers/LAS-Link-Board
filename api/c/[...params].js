@@ -13,7 +13,22 @@ function base64urlDecode(str) {
 
 module.exports = function handler(req, res) {
   try {
-    const params = req.query.params || [];
+    // Vercel populates req.query differently depending on routing:
+    // - Auto-routing (no rewrite): req.query.params = ['campaignId', 'base64dest']
+    // - Rewrite with :path*:       req.query.path = ['campaignId', 'base64dest']
+    // - Rewrite with :params*:     req.query.params = ['campaignId', 'base64dest']
+    // Try all variants, plus parse from URL as final fallback.
+    let params = req.query.params || req.query.path || [];
+
+    // Fallback: parse from the raw URL if query params are empty
+    if ((!params || params.length === 0) && req.url) {
+      const urlPath = req.url.split('?')[0]; // remove query string
+      const match = urlPath.match(/\/api\/c\/(.+)/);
+      if (match) {
+        params = match[1].split('/');
+      }
+    }
+
     let campaignId, dest;
 
     if (params.length >= 2) {
