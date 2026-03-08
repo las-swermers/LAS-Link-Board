@@ -1,17 +1,40 @@
-// Click tracking endpoint — logs campaign link clicks and redirects to destination
+// Click tracking endpoint — logs link clicks and redirects to destination
+// Uses path-based encoding: /api/c/[campaignId]/[base64url_destination]
+// This avoids query-param mangling by Gmail and other email clients.
 const SUPABASE_URL = 'https://pmhoeqxuamvqlwsatozu.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtaG9lcXh1YW12cWx3c2F0b3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MTY2NDYsImV4cCI6MjA4ODM5MjY0Nn0.ktaozIz1XrIUeUrPjtKp3VZ92BptG8xehOFsv_ny12w';
 
-module.exports = async function handler(req, res) {
-  const { id } = req.query;
-  const dest = req.query.url || req.query.u;
+function base64urlDecode(str) {
+  // Restore standard base64 from base64url
+  let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  return Buffer.from(b64, 'base64').toString('utf-8');
+}
 
-  if (!id || !dest) {
+module.exports = async function handler(req, res) {
+  const params = req.query.params || [];
+
+  // Support two formats:
+  // 1. New: /api/c/[campaignId]/[base64url_destination]  (path-based, preferred)
+  // 2. Legacy: /api/c/[campaignId]?u=[destination]       (query-param fallback)
+  let campaignId, dest;
+
+  if (params.length >= 2) {
+    // Path-based: /api/c/campaignId/base64urlDest
+    campaignId = params[0];
+    dest = base64urlDecode(params.slice(1).join('/'));
+  } else if (params.length === 1) {
+    // Legacy query-param: /api/c/campaignId?u=dest
+    campaignId = params[0];
+    dest = req.query.url || req.query.u;
+  }
+
+  if (!campaignId || !dest) {
     res.status(400).send('Missing parameters');
     return;
   }
 
-  // Log the click
+  // Log the click (fire-and-forget — don't delay the redirect)
   try {
     const ua = req.headers['user-agent'] || '';
     const ip = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '';
@@ -26,7 +49,7 @@ module.exports = async function handler(req, res) {
         'Prefer': 'return=minimal'
       },
       body: JSON.stringify({
-        campaign_id: id,
+        campaign_id: campaignId,
         link_url: dest,
         user_agent: ua,
         ip_hash: ipHash,
