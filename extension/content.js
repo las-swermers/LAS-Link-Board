@@ -165,11 +165,13 @@ function injectPixel(dialog, campaignId) {
   if (!target) return;
 
   // Wrap links for click tracking — rewrite href to go through our redirect endpoint
+  // Uses path-based base64url encoding (no query params) to prevent Gmail URL mangling
   const links = target.querySelectorAll('a[href]');
   links.forEach(a => {
     const href = a.getAttribute('href');
     if (href && href.startsWith('http') && !href.includes('las-link-board.vercel.app/api/')) {
-      const trackUrl = CLICK_BASE + campaignId + '?u=' + encodeURIComponent(href);
+      const b64 = btoa(href).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const trackUrl = CLICK_BASE + campaignId + '/' + b64;
       a.setAttribute('href', trackUrl);
     }
   });

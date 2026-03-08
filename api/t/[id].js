@@ -12,20 +12,28 @@ const PIXEL = Buffer.from(
 const DEDUP_MINUTES = 5;
 
 // Grace period: ignore opens within this many seconds of campaign creation
-// (Gmail image proxy pre-fetches pixels immediately at send time)
-const GRACE_SECONDS = 60;
+// (some email clients pre-fetch images at send time — keep this short so
+// legitimate fast opens still count)
+const GRACE_SECONDS = 10;
 
-// Known image proxy / prefetch bot patterns in User-Agent strings
+// Actual bot / scanner patterns to filter out (NOT email proxies)
+// Mailchimp-style: email proxies (GoogleImageProxy, YahooMailProxy, etc.)
+// represent REAL opens — the proxy fetches the image when the user opens the
+// email, so filtering them means recording zero opens for Gmail/Yahoo/Outlook.
 const BOT_PATTERNS = [
-  'GoogleImageProxy',
-  'ggpht.com',
-  'YahooMailProxy',
-  'Outlook-iOS-Android',
-  'Microsoft Office',
-  'fetch',
-  'bot',
   'spider',
-  'crawler'
+  'crawler',
+  'Slurp',          // Yahoo search bot
+  'Baiduspider',
+  'bingbot',
+  'Googlebot',      // search bot, NOT GoogleImageProxy
+  'AhrefsBot',
+  'SemrushBot',
+  'DotBot',
+  'MJ12bot',
+  'PetalBot',
+  'linkfluence',
+  'BLEXBot'
 ];
 
 function isBot(ua) {
