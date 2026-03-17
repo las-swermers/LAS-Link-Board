@@ -124,15 +124,24 @@ module.exports = async (req, res) => {
 
       let r = await upsertSettings(payload);
 
-      // If save failed, retry without active_skill_id (column may not exist yet)
+      // If save failed due to unknown columns, strip them and retry
       if (!r.ok) {
         const errText = await r.text();
-        if (errText.includes('active_skill_id') || errText.includes('skill')) {
-          const { active_skill_id: _skip, ...fallbackPayload } = payload;
-          r = await upsertSettings(fallbackPayload);
+        // Supabase returns column name in error when column doesn't exist
+        const optionalCols = ['active_skill_id', 'anthropic_api_key', 'anthropic_base_url', 'soap_notes', 'transcription_mode'];
+        let retryPayload = { ...payload };
+        let stripped = false;
+        for (const col of optionalCols) {
+          if (errText.includes(col)) {
+            delete retryPayload[col];
+            stripped = true;
+          }
+        }
+        if (stripped) {
+          r = await upsertSettings(retryPayload);
         }
         if (!r.ok) {
-          const err2 = await r.text().catch(() => errText);
+          const err2 = stripped ? await r.text().catch(() => errText) : errText;
           return res.status(500).json({ error: 'Failed to save: ' + err2 });
         }
       }
