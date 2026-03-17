@@ -4323,9 +4323,9 @@ async function detectVtOS() {
     // Fallback: direct download links to known build assets
     const macBtn = document.getElementById('vtDownloadMacBtn');
     const winBtn = document.getElementById('vtDownloadWinBtn');
-    macBtn.href = 'https://github.com/las-swermers/LAS-Link-Board/releases/download/untagged-d7c1c838eec539694c34/VoiceType-0.1.0-arm64-mac.zip';
+    macBtn.href = 'https://github.com/las-swermers/LAS-Link-Board/releases/download/v0.1.0/VoiceType-0.1.0-arm64-mac.zip';
     macBtn.onclick = null;
-    winBtn.href = 'https://github.com/las-swermers/LAS-Link-Board/releases/download/untagged-d7c1c838eec539694c34/VoiceType-Setup-0.1.0.exe';
+    winBtn.href = 'https://github.com/las-swermers/LAS-Link-Board/releases/download/v0.1.0/VoiceType-Setup-0.1.0.exe';
     winBtn.onclick = null;
     status.textContent = 'Latest version: v0.1.0';
   }
@@ -4347,8 +4347,8 @@ function downloadVt(os) {
   }
   // Fallback: direct download links to known build
   const fallbackUrls = {
-    mac: 'https://github.com/las-swermers/LAS-Link-Board/releases/download/untagged-d7c1c838eec539694c34/VoiceType-0.1.0-arm64-mac.zip',
-    win: 'https://github.com/las-swermers/LAS-Link-Board/releases/download/untagged-d7c1c838eec539694c34/VoiceType-Setup-0.1.0.exe'
+    mac: 'https://github.com/las-swermers/LAS-Link-Board/releases/download/v0.1.0/VoiceType-0.1.0-arm64-mac.zip',
+    win: 'https://github.com/las-swermers/LAS-Link-Board/releases/download/v0.1.0/VoiceType-Setup-0.1.0.exe'
   };
   if (fallbackUrls[os]) {
     window.open(fallbackUrls[os], '_blank');
