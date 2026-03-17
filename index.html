@@ -1208,6 +1208,7 @@ body {
               <div class="vt-api-key-wrap">
                 <input type="password" id="vtApiKey" placeholder="sk-..." autocomplete="off">
                 <button class="btn btn-soft btn-sm" onclick="toggleVtKeyVisibility()" id="vtKeyToggle">Show</button>
+                <button class="btn btn-danger-ghost btn-sm" onclick="deleteVtApiKey()" title="Remove API key">Delete</button>
               </div>
               <div class="vt-hint">Your key is encrypted and stored securely. Get one at <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--gold);font-weight:600">platform.openai.com</a></div>
             </div>
@@ -3871,6 +3872,12 @@ function copyVtTranscript() {
   }).catch(() => {
     toast('Failed to copy — select and copy manually');
   });
+}
+
+async function deleteVtApiKey() {
+  if (!confirm('Remove your OpenAI API key? VoiceType will stop working until you add a new one.')) return;
+  document.getElementById('vtApiKey').value = '';
+  await saveVtSettings();
 }
 
 function toggleVtKeyVisibility() {
