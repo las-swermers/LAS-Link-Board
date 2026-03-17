@@ -1264,6 +1264,35 @@ body {
             </div>
           </div>
 
+          <div class="vt-card" id="vtSoapCard">
+            <h4>SOAP Note Formatting</h4>
+            <div class="vt-toggle-row">
+              <div>
+                <div class="vt-toggle-label">Format transcriptions as SOAP notes</div>
+                <div class="vt-toggle-desc">Converts raw transcripts into structured Subjective/Objective/Assessment/Plan format in 3rd person clinical language. Requires an Anthropic API key.</div>
+              </div>
+              <label class="vt-switch">
+                <input type="checkbox" id="vtSoapNotes" onchange="onVtSoapChange()">
+                <span class="vt-slider"></span>
+              </label>
+            </div>
+            <div id="vtSoapKeySection" style="display:none;margin-top:1rem">
+              <div class="vt-field">
+                <label>Anthropic API Key</label>
+                <div class="vt-api-key-wrap">
+                  <input type="password" id="vtAnthropicKey" placeholder="sk-ant-..." autocomplete="off">
+                  <button class="btn btn-soft btn-sm" onclick="toggleVtAnthropicKeyVisibility()" id="vtAnthropicKeyToggle">Show</button>
+                </div>
+                <div class="vt-hint">Used for SOAP note formatting via Claude. Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--gold);font-weight:600">console.anthropic.com</a></div>
+              </div>
+              <div class="vt-field">
+                <label>API Base URL <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+                <input type="text" id="vtAnthropicBaseUrl" placeholder="https://api.anthropic.com (default)" autocomplete="off">
+                <div class="vt-hint">For HIPAA compliance, use an AWS Bedrock or Azure endpoint with a BAA. Leave blank for default Anthropic API.</div>
+              </div>
+            </div>
+          </div>
+
           <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
             <button class="btn btn-outline btn-sm" onclick="loadVtSettings()">Reset</button>
             <button class="btn btn-gold" onclick="saveVtSettings()">Save Settings</button>
@@ -3695,6 +3724,9 @@ async function loadVtSettings() {
     document.getElementById('vtLanguage').value = vtSettings.language || 'en';
     document.getElementById('vtAutoSubmit').checked = !!vtSettings.auto_submit;
     document.getElementById('vtTranscriptionMode').value = vtSettings.transcription_mode || 'cloud';
+    document.getElementById('vtSoapNotes').checked = !!vtSettings.soap_notes;
+    document.getElementById('vtAnthropicKey').value = vtSettings.anthropic_api_key || '';
+    document.getElementById('vtAnthropicBaseUrl').value = vtSettings.anthropic_base_url || '';
     const isLocal = vtSettings.transcription_mode === 'local';
     const isActive = isLocal || vtSettings.openai_api_key;
     document.getElementById('vtStatus').textContent = isLocal ? 'Active (Local)' : (vtSettings.openai_api_key ? 'Active' : 'No API key');
@@ -3705,13 +3737,29 @@ async function loadVtSettings() {
     document.getElementById('vtLanguage').value = 'en';
     document.getElementById('vtAutoSubmit').checked = false;
     document.getElementById('vtTranscriptionMode').value = 'cloud';
+    document.getElementById('vtSoapNotes').checked = false;
+    document.getElementById('vtAnthropicKey').value = '';
+    document.getElementById('vtAnthropicBaseUrl').value = '';
     document.getElementById('vtStatus').textContent = 'Not configured';
     document.getElementById('vtStatus').style.color = 'var(--text-muted)';
   }
   onVtModeChange();
+  onVtSoapChange();
 
   updateVtHotkeyDisplay();
   loadVtUsageSummary();
+}
+
+function onVtSoapChange() {
+  const on = document.getElementById('vtSoapNotes').checked;
+  document.getElementById('vtSoapKeySection').style.display = on ? 'block' : 'none';
+}
+
+function toggleVtAnthropicKeyVisibility() {
+  const inp = document.getElementById('vtAnthropicKey');
+  const btn = document.getElementById('vtAnthropicKeyToggle');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Hide'; }
+  else { inp.type = 'password'; btn.textContent = 'Show'; }
 }
 
 function onVtModeChange() {
@@ -3741,7 +3789,10 @@ async function saveVtSettings() {
     hotkey: document.getElementById('vtHotkey').value,
     language: document.getElementById('vtLanguage').value,
     auto_submit: document.getElementById('vtAutoSubmit').checked,
-    transcription_mode: document.getElementById('vtTranscriptionMode').value
+    transcription_mode: document.getElementById('vtTranscriptionMode').value,
+    soap_notes: document.getElementById('vtSoapNotes').checked,
+    anthropic_api_key: document.getElementById('vtAnthropicKey').value.trim(),
+    anthropic_base_url: document.getElementById('vtAnthropicBaseUrl').value.trim()
   };
 
   // Save via server API route (handles encryption of API key)

@@ -11,6 +11,7 @@ const { transcribe } = require('./whisper');
 const { injectText } = require('./injector');
 const { showLoginWindow } = require('./login');
 const localWhisper = require('./local-whisper');
+const { formatSOAPNote } = require('./soap-formatter');
 const Store = require('electron-store');
 
 const store = new Store({ name: 'voicetype-config' });
@@ -284,7 +285,24 @@ async function onHotkeyUp() {
     const text = await transcribe(apiKey, audioBuffer, settings?.language || 'en', authToken, mode);
 
     if (text && text.trim()) {
-      await injectText(text.trim(), !!settings?.auto_submit);
+      let finalText = text.trim();
+
+      // Apply SOAP note formatting if enabled
+      if (settings?.soap_notes) {
+        showIndicator('Formatting SOAP note...');
+        try {
+          finalText = await formatSOAPNote(finalText, {
+            apiKey: settings?.anthropic_api_key || store.get('anthropic_api_key'),
+            baseURL: settings?.anthropic_base_url || undefined,
+            model: settings?.anthropic_model || undefined
+          });
+        } catch (e) {
+          console.error('SOAP formatting failed, using raw transcript:', e.message);
+          finalText = text.trim();
+        }
+      }
+
+      await injectText(finalText, !!settings?.auto_submit);
       showIndicator('Done!');
 
       // Log usage to Supabase

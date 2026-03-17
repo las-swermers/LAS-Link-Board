@@ -84,7 +84,10 @@ function getCachedSettings(store) {
     language: 'en',
     auto_submit: false,
     openai_api_key: '',
-    transcription_mode: 'cloud'
+    transcription_mode: 'cloud',
+    soap_notes: false,
+    anthropic_api_key: '',
+    anthropic_base_url: ''
   };
 }
 

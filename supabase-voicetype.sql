@@ -14,13 +14,19 @@ CREATE TABLE IF NOT EXISTS voicetype_settings (
   language TEXT DEFAULT 'en',
   auto_submit BOOLEAN DEFAULT false,
   transcription_mode TEXT DEFAULT 'cloud',  -- 'cloud' or 'local'
+  soap_notes BOOLEAN DEFAULT false,
+  anthropic_api_key TEXT DEFAULT '',
+  anthropic_base_url TEXT DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Migration: add transcription_mode column if table already exists
+-- Migration: add new columns if table already exists
 DO $$ BEGIN
   ALTER TABLE voicetype_settings ADD COLUMN IF NOT EXISTS transcription_mode TEXT DEFAULT 'cloud';
+  ALTER TABLE voicetype_settings ADD COLUMN IF NOT EXISTS soap_notes BOOLEAN DEFAULT false;
+  ALTER TABLE voicetype_settings ADD COLUMN IF NOT EXISTS anthropic_api_key TEXT DEFAULT '';
+  ALTER TABLE voicetype_settings ADD COLUMN IF NOT EXISTS anthropic_base_url TEXT DEFAULT '';
 EXCEPTION WHEN others THEN NULL;
 END $$;
 
