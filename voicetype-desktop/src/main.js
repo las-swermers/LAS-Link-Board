@@ -10,6 +10,7 @@ const { startRecording, stopRecording } = require('./recorder');
 const { transcribe } = require('./whisper');
 const { injectText } = require('./injector');
 const { showLoginWindow } = require('./login');
+const localWhisper = require('./local-whisper');
 const Store = require('electron-store');
 
 const store = new Store({ name: 'voicetype-config' });
@@ -104,6 +105,32 @@ function updateTrayMenu(statusText) {
         }
       }
     },
+    {
+      label: 'Mode: ' + (settings?.transcription_mode === 'local' ? 'Local (HIPAA)' : 'Cloud'),
+      enabled: false
+    },
+    {
+      label: localWhisper.isModelDownloaded()
+        ? 'Local Model: Downloaded (' + localWhisper.getModelSize() + ' MB)'
+        : 'Download Local Model (~150 MB)',
+      click: async () => {
+        if (localWhisper.isModelDownloaded()) return;
+        updateTrayMenu('Downloading model...');
+        try {
+          localWhisper.onProgress((data) => {
+            if (data.status === 'progress' && data.progress) {
+              updateTrayMenu('Model: ' + Math.round(data.progress) + '%');
+            }
+          });
+          await localWhisper.loadPipeline();
+          updateTrayMenu('Ready');
+        } catch (e) {
+          console.error('Model download failed:', e);
+          updateTrayMenu('Download failed');
+        }
+      }
+    },
+    { type: 'separator' },
     {
       label: 'Open LinkBoard',
       click: () => {
@@ -239,16 +266,22 @@ async function onHotkeyUp() {
       return; // Too short, ignore
     }
 
+    const mode = settings?.transcription_mode || store.get('transcription_mode') || 'cloud';
     const apiKey = settings?.openai_api_key || store.get('openai_api_key');
-    if (!apiKey) {
+
+    if (mode !== 'local' && !apiKey) {
       hideIndicator();
       updateTrayMenu('No API key');
       console.error('No OpenAI API key configured');
       return;
     }
 
+    if (mode === 'local') {
+      showIndicator('Transcribing locally...');
+    }
+
     const authToken = store.get('supabase_token');
-    const text = await transcribe(apiKey, audioBuffer, settings?.language || 'en', authToken);
+    const text = await transcribe(apiKey, audioBuffer, settings?.language || 'en', authToken, mode);
 
     if (text && text.trim()) {
       await injectText(text.trim(), !!settings?.auto_submit);

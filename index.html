@@ -1202,6 +1202,18 @@ body {
           </div>
 
           <div class="vt-card">
+            <h4>Transcription Mode</h4>
+            <div class="vt-field">
+              <label>Processing</label>
+              <select id="vtTranscriptionMode" onchange="onVtModeChange()">
+                <option value="cloud">Cloud — OpenAI Whisper API (requires API key)</option>
+                <option value="local">Local — On-device (HIPAA-safe, no data leaves machine)</option>
+              </select>
+              <div id="vtModeHint" class="vt-hint"></div>
+            </div>
+          </div>
+
+          <div class="vt-card" id="vtApiKeyCard">
             <h4>OpenAI API Key</h4>
             <div class="vt-field">
               <label>API Key</label>
@@ -3677,24 +3689,42 @@ async function loadVtSettings() {
     }
   } catch (e) { console.error('VoiceType settings load error:', e); vtSettings = null; }
 
-  if (vtSettings && (vtSettings.openai_api_key || vtSettings.hotkey)) {
+  if (vtSettings && (vtSettings.openai_api_key || vtSettings.hotkey || vtSettings.transcription_mode)) {
     document.getElementById('vtApiKey').value = vtSettings.openai_api_key || '';
     document.getElementById('vtHotkey').value = vtSettings.hotkey || 'CommandOrControl+Shift+Space';
     document.getElementById('vtLanguage').value = vtSettings.language || 'en';
     document.getElementById('vtAutoSubmit').checked = !!vtSettings.auto_submit;
-    document.getElementById('vtStatus').textContent = vtSettings.openai_api_key ? 'Active' : 'No API key';
-    document.getElementById('vtStatus').style.color = vtSettings.openai_api_key ? '#1A7A6D' : 'var(--text-muted)';
+    document.getElementById('vtTranscriptionMode').value = vtSettings.transcription_mode || 'cloud';
+    const isLocal = vtSettings.transcription_mode === 'local';
+    const isActive = isLocal || vtSettings.openai_api_key;
+    document.getElementById('vtStatus').textContent = isLocal ? 'Active (Local)' : (vtSettings.openai_api_key ? 'Active' : 'No API key');
+    document.getElementById('vtStatus').style.color = isActive ? '#1A7A6D' : 'var(--text-muted)';
   } else {
     document.getElementById('vtApiKey').value = '';
     document.getElementById('vtHotkey').value = 'CommandOrControl+Shift+Space';
     document.getElementById('vtLanguage').value = 'en';
     document.getElementById('vtAutoSubmit').checked = false;
+    document.getElementById('vtTranscriptionMode').value = 'cloud';
     document.getElementById('vtStatus').textContent = 'Not configured';
     document.getElementById('vtStatus').style.color = 'var(--text-muted)';
   }
+  onVtModeChange();
 
   updateVtHotkeyDisplay();
   loadVtUsageSummary();
+}
+
+function onVtModeChange() {
+  const mode = document.getElementById('vtTranscriptionMode').value;
+  const apiKeyCard = document.getElementById('vtApiKeyCard');
+  const hint = document.getElementById('vtModeHint');
+  if (mode === 'local') {
+    apiKeyCard.style.display = 'none';
+    hint.innerHTML = '<strong style="color:#1A7A6D">HIPAA-safe:</strong> Audio is processed entirely on-device using a local Whisper model (~150 MB download on first use). No audio data is sent to any server. Requires the desktop app.';
+  } else {
+    apiKeyCard.style.display = '';
+    hint.textContent = 'Audio is sent to OpenAI\'s Whisper API for transcription. Requires an API key.';
+  }
 }
 
 function updateVtHotkeyDisplay() {
@@ -3710,7 +3740,8 @@ async function saveVtSettings() {
     openai_api_key: document.getElementById('vtApiKey').value.trim(),
     hotkey: document.getElementById('vtHotkey').value,
     language: document.getElementById('vtLanguage').value,
-    auto_submit: document.getElementById('vtAutoSubmit').checked
+    auto_submit: document.getElementById('vtAutoSubmit').checked,
+    transcription_mode: document.getElementById('vtTranscriptionMode').value
   };
 
   // Save via server API route (handles encryption of API key)

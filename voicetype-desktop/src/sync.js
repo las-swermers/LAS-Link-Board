@@ -83,7 +83,8 @@ function getCachedSettings(store) {
     hotkey: 'CommandOrControl+Shift+Space',
     language: 'en',
     auto_submit: false,
-    openai_api_key: ''
+    openai_api_key: '',
+    transcription_mode: 'cloud'
   };
 }
 

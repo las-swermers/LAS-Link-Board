@@ -58,13 +58,14 @@ module.exports = async (req, res) => {
       if (!r.ok) return res.status(500).json({ error: 'Failed to fetch settings' });
       const rows = await r.json();
       if (rows.length === 0) {
-        return res.json({ hotkey: 'CommandOrControl+Shift+Space', language: 'en', auto_submit: false, openai_api_key: '' });
+        return res.json({ hotkey: 'CommandOrControl+Shift+Space', language: 'en', auto_submit: false, openai_api_key: '', transcription_mode: 'cloud' });
       }
       const s = rows[0];
       return res.json({
         hotkey: s.hotkey,
         language: s.language,
         auto_submit: s.auto_submit,
+        transcription_mode: s.transcription_mode || 'cloud',
         // Decrypt the API key before returning
         openai_api_key: decrypt(s.openai_api_key || '')
       });
@@ -75,7 +76,7 @@ module.exports = async (req, res) => {
 
   if (req.method === 'PUT') {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { hotkey, language, auto_submit, openai_api_key } = body || {};
+    const { hotkey, language, auto_submit, openai_api_key, transcription_mode } = body || {};
 
     // Check if settings row exists
     try {
@@ -90,6 +91,7 @@ module.exports = async (req, res) => {
         hotkey: hotkey || 'CommandOrControl+Shift+Space',
         language: language || 'en',
         auto_submit: !!auto_submit,
+        transcription_mode: transcription_mode || 'cloud',
         // Encrypt the API key before storing
         openai_api_key: encrypt(openai_api_key || ''),
         updated_at: new Date().toISOString()

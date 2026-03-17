@@ -13,9 +13,16 @@ CREATE TABLE IF NOT EXISTS voicetype_settings (
   hotkey TEXT DEFAULT 'CommandOrControl+Shift+Space',
   language TEXT DEFAULT 'en',
   auto_submit BOOLEAN DEFAULT false,
+  transcription_mode TEXT DEFAULT 'cloud',  -- 'cloud' or 'local'
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Migration: add transcription_mode column if table already exists
+DO $$ BEGIN
+  ALTER TABLE voicetype_settings ADD COLUMN IF NOT EXISTS transcription_mode TEXT DEFAULT 'cloud';
+EXCEPTION WHEN others THEN NULL;
+END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_voicetype_settings_user_id
   ON voicetype_settings(user_id);
