@@ -32,19 +32,30 @@ jobs:
         working-directory: voicetype-desktop
         run: npm ci || npm install
 
-      - name: Build Electron app
+      # ── macOS: Signed + Notarized build ──
+      - name: Build & Sign Electron app (macOS)
+        if: runner.os == 'macOS'
         working-directory: voicetype-desktop
-        run: |
-          if [ "$RUNNER_OS" = "macOS" ]; then
-            npx electron-builder --mac --publish never
-          else
-            npx electron-builder --win --publish never
-          fi
+        env:
+          # Code signing — Developer ID Application certificate as base64 .p12
+          CSC_LINK: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          # Notarization — called by scripts/notarize.js (afterSign hook)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npx electron-builder --mac --publish never
+
+      # ── Windows build ──
+      - name: Build Electron app (Windows)
+        if: runner.os == 'Windows'
+        working-directory: voicetype-desktop
+        run: npx electron-builder --win --publish never
         shell: bash
 
-      - name: Copy fix script to dist (macOS)
+      - name: Copy fix script to dist (macOS, unsigned fallback)
         if: runner.os == 'macOS'
-        run: cp "voicetype-desktop/Fix VoiceType.command" "voicetype-desktop/dist/Fix VoiceType.command"
+        run: cp "voicetype-desktop/Fix VoiceType.command" "voicetype-desktop/dist/Fix VoiceType.command" 2>/dev/null || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -77,23 +88,15 @@ jobs:
             ## VoiceType Desktop ${{ github.ref_name }}
 
             ### Downloads
-            - **macOS**: Download the `.zip` file, unzip, and move VoiceType.app to Applications
+            - **macOS**: Download the `.dmg` file and drag VoiceType to Applications
             - **Windows**: Download the `.exe` installer and run it
 
-            ### macOS: First Launch
-            Since VoiceType is not yet signed with an Apple Developer certificate, macOS may show
-            **"VoiceType is damaged and can't be opened"**. To fix this:
+            ### macOS Notes
+            This build is **signed and notarized** by Apple — it should open without any Gatekeeper warnings.
 
-            **Option 1 (easiest):** Download the `Fix.VoiceType.command` file from this release,
-            double-click it, and it will fix the issue automatically.
-
-            **Option 2:** Open Terminal (search "Terminal" in Spotlight) and run:
-            ```
-            xattr -cr ~/Applications/VoiceType.app
-            ```
-            (Adjust the path if you placed VoiceType.app elsewhere, e.g. `~/Documents/VoiceType.app`)
-
-            Then double-click VoiceType to open it.
+            If your IT admin is deploying via Jamf, the PPPC profile in the repo
+            (`voicetype-desktop/mdm/VoiceType-PPPC.mobileconfig`) pre-approves
+            Microphone, Accessibility, and Apple Events permissions.
 
             ### Getting Started
             1. Sign in with your LinkBoard account
