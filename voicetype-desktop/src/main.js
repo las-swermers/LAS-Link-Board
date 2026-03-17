@@ -5,10 +5,11 @@
 const { app, Tray, Menu, BrowserWindow, nativeImage, ipcMain } = require('electron');
 const path = require('path');
 const { registerHotkey, unregisterAll } = require('./hotkey');
-const { syncSettings } = require('./sync');
+const { syncSettings, storeAuth } = require('./sync');
 const { startRecording, stopRecording } = require('./recorder');
 const { transcribe } = require('./whisper');
 const { injectText } = require('./injector');
+const { showLoginWindow } = require('./login');
 const Store = require('electron-store');
 
 const store = new Store({ name: 'voicetype-config' });
@@ -30,6 +31,19 @@ app.on('ready', async () => {
   createTray();
   createIndicatorWindow();
 
+  // Check if user is logged in — show login window if not
+  const hasToken = store.get('supabase_token') && store.get('user_id');
+  if (!hasToken) {
+    updateTrayMenu('Awaiting login...');
+    try {
+      const auth = await showLoginWindow();
+      storeAuth(store, auth);
+    } catch (e) {
+      // User closed login window — continue with defaults
+      console.log('Login skipped:', e.message);
+    }
+  }
+
   // Load settings from Supabase (or local cache)
   try {
     settings = await syncSettings(store);
@@ -41,7 +55,6 @@ app.on('ready', async () => {
     updateTrayMenu('Ready');
   } catch (e) {
     console.error('Failed to load settings:', e.message);
-    // Fall back to defaults
     registerHotkey('CommandOrControl+Shift+Space', onHotkeyDown, onHotkeyUp);
     updateTrayMenu('Ready (offline)');
   }
@@ -96,6 +109,28 @@ function updateTrayMenu(statusText) {
       click: () => {
         const { shell } = require('electron');
         shell.openExternal('https://linkboard.vercel.app');
+      }
+    },
+    {
+      label: store.get('user_id') ? 'Sign Out' : 'Sign In',
+      click: async () => {
+        if (store.get('user_id')) {
+          const { clearAuth } = require('./sync');
+          clearAuth(store);
+          settings = null;
+          updateTrayMenu('Signed out');
+        } else {
+          try {
+            const auth = await showLoginWindow();
+            storeAuth(store, auth);
+            settings = await syncSettings(store);
+            unregisterAll();
+            registerHotkey(settings?.hotkey || 'CommandOrControl+Shift+Space', onHotkeyDown, onHotkeyUp);
+            updateTrayMenu('Ready');
+          } catch (e) {
+            // Login window closed
+          }
+        }
       }
     },
     { type: 'separator' },
