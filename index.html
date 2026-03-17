@@ -816,6 +816,7 @@ body {
 .vt-download-card .vt-os-name { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem; }
 .vt-download-card .vt-os-desc { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1rem; }
 .vt-download-card.vt-recommended { border-color: var(--gold); background: var(--gold-light); }
+.vt-dl-hint { display: block; font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem; }
 
 .vt-steps { counter-reset: vt-step; margin-top: 1.5rem; }
 .vt-steps li {
@@ -1345,36 +1346,41 @@ body {
         <!-- Download Panel -->
         <div class="vt-panel" id="vtPanelDownload">
           <div class="vt-card">
-            <h4>Download VoiceType Desktop</h4>
+            <h4>Download VoiceType</h4>
             <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem">
-              VoiceType runs silently in your system tray. Press the hotkey to record, release to transcribe, and text appears wherever your cursor is.
+              A lightweight desktop app that lives in your menu bar. Hold the hotkey, speak, release — your words appear as text wherever your cursor is. No install wizard needed.
             </p>
             <div class="vt-download-grid">
               <div class="vt-download-card" id="vtDownloadMac">
                 <div class="vt-os-icon">&#63743;</div>
                 <div class="vt-os-name">macOS</div>
                 <div class="vt-os-desc">Apple Silicon &amp; Intel</div>
-                <a class="btn btn-gold btn-sm" id="vtDownloadMacBtn" href="#" onclick="downloadVt('mac')">Download .dmg</a>
+                <a class="btn btn-gold btn-sm" id="vtDownloadMacBtn" href="#" onclick="downloadVt('mac')">Download for Mac</a>
+                <span class="vt-dl-hint" id="vtMacHint">.zip — unzip and run</span>
               </div>
               <div class="vt-download-card" id="vtDownloadWin">
                 <div class="vt-os-icon">&#8862;</div>
                 <div class="vt-os-name">Windows</div>
                 <div class="vt-os-desc">Windows 10+</div>
-                <a class="btn btn-gold btn-sm" id="vtDownloadWinBtn" href="#" onclick="downloadVt('win')">Download .exe</a>
+                <a class="btn btn-gold btn-sm" id="vtDownloadWinBtn" href="#" onclick="downloadVt('win')">Download for Windows</a>
+                <span class="vt-dl-hint" id="vtWinHint">.exe — run directly, no install</span>
               </div>
             </div>
-            <p id="vtDownloadStatus" style="font-size:0.78rem;color:var(--text-muted);text-align:center;margin-top:1rem">Installers will be available once the desktop app is built.</p>
+            <p id="vtDownloadStatus" style="font-size:0.78rem;color:var(--text-muted);text-align:center;margin-top:1rem">Checking for latest version...</p>
           </div>
 
           <div class="vt-card">
             <h4>Getting Started</h4>
             <ol class="vt-steps">
-              <li>Download and install VoiceType for your operating system</li>
-              <li>Launch VoiceType — it will appear in your system tray / menu bar</li>
-              <li>Sign in with your LinkBoard account (same email/password)</li>
-              <li>Press <strong id="vtHotkeyDisplay">Ctrl/Cmd + Shift + Space</strong> to start recording, release to transcribe</li>
-              <li>Text is automatically typed into whatever app has focus</li>
+              <li><strong>Download</strong> VoiceType above — on Mac, unzip and move VoiceType.app to your Documents or Applications folder</li>
+              <li><strong>Open</strong> VoiceType — on first launch, right-click the app and choose Open (macOS security prompt)</li>
+              <li><strong>Sign in</strong> with your LinkBoard account — same email and password you use here</li>
+              <li><strong>Press and hold</strong> <strong id="vtHotkeyDisplay">Ctrl/Cmd + Shift + Space</strong> to record, release to transcribe</li>
+              <li><strong>Text appears</strong> wherever your cursor is — notes, emails, documents, anywhere</li>
             </ol>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.75rem">
+              VoiceType stays in your menu bar and uses almost no resources when idle. Right-click the menu bar icon for settings.
+            </p>
           </div>
         </div>
 
@@ -4294,11 +4300,18 @@ async function detectVtOS() {
 
   const status = document.getElementById('vtDownloadStatus');
   if (vtReleaseData && vtReleaseData.assets) {
+    // Mac: prefer .zip (portable), fall back to .dmg
+    const macZip = vtReleaseData.assets.find(a => a.name.endsWith('-mac.zip'));
     const dmg = vtReleaseData.assets.find(a => a.name.endsWith('.dmg'));
+    const macAsset = macZip || dmg;
+    // Windows: prefer portable .exe, fall back to any .exe
     const exe = vtReleaseData.assets.find(a => a.name.endsWith('.exe'));
-    if (dmg) {
-      document.getElementById('vtDownloadMacBtn').href = dmg.browser_download_url;
+
+    if (macAsset) {
+      document.getElementById('vtDownloadMacBtn').href = macAsset.browser_download_url;
       document.getElementById('vtDownloadMacBtn').onclick = null;
+      const hint = document.getElementById('vtMacHint');
+      if (hint) hint.textContent = macAsset.name.endsWith('.zip') ? '.zip — unzip and run' : '.dmg — open and drag to Applications';
     }
     if (exe) {
       document.getElementById('vtDownloadWinBtn').href = exe.browser_download_url;
@@ -4306,21 +4319,25 @@ async function detectVtOS() {
     }
     status.textContent = 'Latest version: ' + vtReleaseData.tag_name.replace('voicetype-v', 'v');
   } else {
-    status.innerHTML = 'No releases yet. The desktop app is being built — check back soon, or <a href="https://github.com/las-swermers/LAS-Link-Board/actions" target="_blank" style="color:var(--gold);font-weight:600">view build status</a>.';
+    status.innerHTML = 'Coming soon — the first release is being prepared.';
   }
 }
 
 function downloadVt(os) {
-  if (vtReleaseData) {
-    const asset = vtReleaseData.assets.find(a =>
-      os === 'mac' ? a.name.endsWith('.dmg') : a.name.endsWith('.exe')
-    );
+  if (vtReleaseData && vtReleaseData.assets) {
+    let asset;
+    if (os === 'mac') {
+      asset = vtReleaseData.assets.find(a => a.name.endsWith('-mac.zip'))
+           || vtReleaseData.assets.find(a => a.name.endsWith('.dmg'));
+    } else {
+      asset = vtReleaseData.assets.find(a => a.name.endsWith('.exe'));
+    }
     if (asset) {
       window.open(asset.browser_download_url, '_blank');
       return;
     }
   }
-  toast('Installer not available yet. Build is in progress — check back soon!');
+  toast('Download not available yet — check back soon!');
 }
 
 // ─── Redirect (public — no auth needed) ───
