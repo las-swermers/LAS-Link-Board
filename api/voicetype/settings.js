@@ -58,7 +58,7 @@ module.exports = async (req, res) => {
       if (!r.ok) return res.status(500).json({ error: 'Failed to fetch settings' });
       const rows = await r.json();
       if (rows.length === 0) {
-        return res.json({ hotkey: 'CommandOrControl+Shift+Space', language: 'en', auto_submit: false, openai_api_key: '', transcription_mode: 'cloud', soap_notes: false, anthropic_api_key: '', anthropic_base_url: '' });
+        return res.json({ hotkey: 'CommandOrControl+Shift+Space', language: 'en', auto_submit: false, openai_api_key: '', transcription_mode: 'cloud', soap_notes: false, active_skill_id: null, anthropic_api_key: '', anthropic_base_url: '' });
       }
       const s = rows[0];
       return res.json({
@@ -67,6 +67,7 @@ module.exports = async (req, res) => {
         auto_submit: s.auto_submit,
         transcription_mode: s.transcription_mode || 'cloud',
         soap_notes: !!s.soap_notes,
+        active_skill_id: s.active_skill_id || null,
         anthropic_base_url: s.anthropic_base_url || '',
         // Decrypt API keys before returning
         openai_api_key: decrypt(s.openai_api_key || ''),
@@ -79,7 +80,7 @@ module.exports = async (req, res) => {
 
   if (req.method === 'PUT') {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { hotkey, language, auto_submit, openai_api_key, transcription_mode, soap_notes, anthropic_api_key, anthropic_base_url } = body || {};
+    const { hotkey, language, auto_submit, openai_api_key, transcription_mode, soap_notes, active_skill_id, anthropic_api_key, anthropic_base_url } = body || {};
 
     // Check if settings row exists
     try {
@@ -96,6 +97,7 @@ module.exports = async (req, res) => {
         auto_submit: !!auto_submit,
         transcription_mode: transcription_mode || 'cloud',
         soap_notes: !!soap_notes,
+        active_skill_id: active_skill_id || null,
         anthropic_base_url: anthropic_base_url || '',
         // Encrypt API keys before storing
         openai_api_key: encrypt(openai_api_key || ''),

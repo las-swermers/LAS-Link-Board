@@ -86,6 +86,7 @@ function getCachedSettings(store) {
     openai_api_key: '',
     transcription_mode: 'cloud',
     soap_notes: false,
+    active_skill_id: null,
     anthropic_api_key: '',
     anthropic_base_url: ''
   };

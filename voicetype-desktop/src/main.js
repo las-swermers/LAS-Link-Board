@@ -11,7 +11,7 @@ const { transcribe } = require('./whisper');
 const { injectText } = require('./injector');
 const { showLoginWindow } = require('./login');
 const localWhisper = require('./local-whisper');
-const { formatSOAPNote } = require('./soap-formatter');
+const { processTranscription, PRESET_SKILLS } = require('./skill-formatter');
 const Store = require('electron-store');
 
 const store = new Store({ name: 'voicetype-config' });
@@ -19,7 +19,8 @@ let tray = null;
 let indicatorWindow = null;
 let isRecording = false;
 let settings = null;
-let soapOverride = null; // null = use settings default, true/false = per-dictation override
+let userSkills = [];       // user's skill list from Supabase
+let selectedSkillIdx = 0;  // index into userSkills for the indicator selector
 
 // Prevent multiple instances
 const gotLock = app.requestSingleInstanceLock();
@@ -47,7 +48,7 @@ app.on('ready', async () => {
     }
   }
 
-  // Load settings from Supabase (or local cache)
+  // Load settings and skills from Supabase (or local cache)
   try {
     settings = await syncSettings(store);
     if (settings && settings.hotkey) {
@@ -55,6 +56,8 @@ app.on('ready', async () => {
     } else {
       registerHotkey('CommandOrControl+Shift+Space', onHotkeyDown, onHotkeyUp);
     }
+    // Sync skills
+    await syncSkills();
     updateTrayMenu('Ready');
   } catch (e) {
     console.error('Failed to load settings:', e.message);
@@ -99,6 +102,7 @@ function updateTrayMenu(statusText) {
       click: async () => {
         try {
           settings = await syncSettings(store);
+          await syncSkills();
           unregisterAll();
           registerHotkey(settings?.hotkey || 'CommandOrControl+Shift+Space', onHotkeyDown, onHotkeyUp);
           updateTrayMenu('Ready');
@@ -153,6 +157,7 @@ function updateTrayMenu(statusText) {
             const auth = await showLoginWindow();
             storeAuth(store, auth);
             settings = await syncSettings(store);
+            await syncSkills();
             unregisterAll();
             registerHotkey(settings?.hotkey || 'CommandOrControl+Shift+Space', onHotkeyDown, onHotkeyUp);
             updateTrayMenu('Ready');
@@ -214,52 +219,72 @@ function createIndicatorWindow() {
       @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
       .label { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; flex: 1; }
       .divider { width: 1px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 12px; }
-      .soap-btn {
+      .skill-btn {
         -webkit-app-region: no-drag;
         display: flex; align-items: center; gap: 6px;
         background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
         border-radius: 8px; padding: 4px 10px; cursor: pointer;
         font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7);
-        transition: all 0.15s ease; white-space: nowrap;
+        transition: all 0.15s ease; white-space: nowrap; max-width: 140px;
+        overflow: hidden; text-overflow: ellipsis;
       }
-      .soap-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
-      .soap-btn.active { background: rgba(26,122,109,0.5); border-color: #1A7A6D; color: #5CEAD8; }
-      .soap-pip {
-        width: 7px; height: 7px; border-radius: 50%;
+      .skill-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+      .skill-btn.active { background: rgba(26,122,109,0.5); border-color: #1A7A6D; color: #5CEAD8; }
+      .skill-pip {
+        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
         background: rgba(255,255,255,0.3); transition: background 0.15s;
       }
-      .soap-btn.active .soap-pip { background: #5CEAD8; }
-      .soap-btn.hidden { display: none; }
+      .skill-btn.active .skill-pip { background: #5CEAD8; }
+      .skill-btn.hidden { display: none; }
+      .auto-badge {
+        font-size: 8px; background: rgba(197,150,59,0.5); color: #fff;
+        border-radius: 3px; padding: 1px 4px; margin-left: 2px; letter-spacing: 0.03em;
+      }
     </style></head>
     <body>
       <div class="dot" id="dot"></div>
       <div class="label" id="label">Recording...</div>
       <div class="divider" id="divider"></div>
-      <button class="soap-btn" id="soapBtn" onclick="toggleSoap()">
-        <div class="soap-pip" id="soapPip"></div>
-        SOAP
+      <button class="skill-btn" id="skillBtn" onclick="cycleSkill()">
+        <div class="skill-pip" id="skillPip"></div>
+        <span id="skillName">Raw</span>
       </button>
       <script>
-        let soapOn = false;
-        function toggleSoap() {
-          soapOn = !soapOn;
-          const btn = document.getElementById('soapBtn');
-          btn.classList.toggle('active', soapOn);
-          if (window.voicetype) window.voicetype.setSoap(soapOn);
+        let skills = [];
+        let currentIdx = 0;
+
+        function setSkills(list, activeIdx) {
+          skills = list || [];
+          currentIdx = activeIdx || 0;
+          updateBtn();
         }
-        function setSoapState(on) {
-          soapOn = on;
-          document.getElementById('soapBtn').classList.toggle('active', on);
+
+        function cycleSkill() {
+          if (skills.length < 2) return;
+          currentIdx = (currentIdx + 1) % skills.length;
+          updateBtn();
+          if (window.voicetype) window.voicetype.setSkill(currentIdx);
         }
+
+        function updateBtn() {
+          const btn = document.getElementById('skillBtn');
+          const name = document.getElementById('skillName');
+          const skill = skills[currentIdx];
+          if (!skill) { name.textContent = 'Raw'; btn.classList.remove('active'); return; }
+          name.textContent = skill.name || 'Raw';
+          const isRaw = skill.category === 'raw' || !skill.system_prompt;
+          btn.classList.toggle('active', !isRaw);
+        }
+
         function setRecording(isRec) {
           document.getElementById('dot').classList.toggle('done', !isRec);
         }
         function hideControls() {
-          document.getElementById('soapBtn').classList.add('hidden');
+          document.getElementById('skillBtn').classList.add('hidden');
           document.getElementById('divider').style.display = 'none';
         }
         function showControls() {
-          document.getElementById('soapBtn').classList.remove('hidden');
+          document.getElementById('skillBtn').classList.remove('hidden');
           document.getElementById('divider').style.display = '';
         }
       </script>
@@ -295,9 +320,9 @@ function hideIndicator() {
   if (indicatorWindow) indicatorWindow.hide();
 }
 
-// IPC: indicator SOAP toggle sends override back to main process
-ipcMain.on('soap-toggle', (_event, on) => {
-  soapOverride = on;
+// IPC: indicator skill selector sends index back to main process
+ipcMain.on('skill-select', (_event, idx) => {
+  selectedSkillIdx = idx;
 });
 
 // ─── Core Flow ───
@@ -306,11 +331,16 @@ function onHotkeyDown() {
   if (isRecording) return;
   isRecording = true;
 
-  // Reset SOAP override to match settings default, user can toggle during recording
-  const soapDefault = !!(settings?.soap_notes);
-  soapOverride = soapDefault;
+  // Reset skill selector to user's default (or first skill)
+  const defaultIdx = userSkills.findIndex(s => s.is_default);
+  selectedSkillIdx = defaultIdx >= 0 ? defaultIdx : 0;
+
+  // Send skills list to indicator window
   if (indicatorWindow) {
-    indicatorWindow.webContents.executeJavaScript(`setSoapState(${soapDefault});`);
+    const skillList = userSkills.map(s => ({ name: s.name, category: s.category, system_prompt: !!s.system_prompt }));
+    indicatorWindow.webContents.executeJavaScript(
+      `setSkills(${JSON.stringify(skillList)}, ${selectedSkillIdx});`
+    );
   }
 
   showIndicator('Recording...', { recording: true, showControls: true });
@@ -329,7 +359,11 @@ function onHotkeyDown() {
 async function onHotkeyUp() {
   if (!isRecording) return;
   isRecording = false;
-  const useSoap = soapOverride !== null ? soapOverride : !!(settings?.soap_notes);
+
+  // Determine which skill the user selected (or null for auto-detect)
+  const selectedSkill = userSkills[selectedSkillIdx] || null;
+  const isRaw = !selectedSkill || selectedSkill.category === 'raw' || !selectedSkill.system_prompt;
+
   showIndicator('Transcribing...', { recording: false, showControls: false });
   updateTrayMenu('Transcribing...');
 
@@ -361,27 +395,34 @@ async function onHotkeyUp() {
 
     if (text && text.trim()) {
       let finalText = text.trim();
+      let usedSkill = null;
 
-      // Apply SOAP note formatting if toggled on (via overlay button or settings)
-      if (useSoap) {
-        showIndicator('Formatting SOAP note...');
+      // Process through skill formatter (handles intent detection + formatting)
+      // If user selected Raw, still run intent detection in case they said "email to..."
+      const anthropicKey = settings?.anthropic_api_key || store.get('anthropic_api_key');
+      if (anthropicKey) {
+        showIndicator(isRaw ? 'Checking...' : `Formatting: ${selectedSkill.name}...`);
         try {
-          finalText = await formatSOAPNote(finalText, {
-            apiKey: settings?.anthropic_api_key || store.get('anthropic_api_key'),
+          const result = await processTranscription(finalText, {
+            skills: userSkills,
+            selectedSkill: isRaw ? null : selectedSkill, // null = auto-detect from speech
+            apiKey: anthropicKey,
             baseURL: settings?.anthropic_base_url || undefined,
             model: settings?.anthropic_model || undefined
           });
+          finalText = result.text;
+          usedSkill = result.skill;
         } catch (e) {
-          console.error('SOAP formatting failed, using raw transcript:', e.message);
+          console.error('Skill formatting failed, using raw transcript:', e.message);
           finalText = text.trim();
         }
       }
 
       await injectText(finalText, !!settings?.auto_submit);
-      showIndicator('Done!');
+      showIndicator(usedSkill ? `Done! (${usedSkill.name})` : 'Done!');
 
-      // Log usage to Supabase
-      logUsage(audioBuffer.length);
+      // Log usage with skill info
+      logUsage(audioBuffer.length, usedSkill);
     } else {
       showIndicator('No speech detected');
     }
@@ -398,7 +439,7 @@ async function onHotkeyUp() {
   }
 }
 
-async function logUsage(bufferLength) {
+async function logUsage(bufferLength, skill) {
   // Estimate duration: 16-bit mono 16kHz = 32000 bytes/sec
   const durationSeconds = Math.max(1, Math.round(bufferLength / 32000));
   const costUsd = (durationSeconds / 60) * 0.006; // Whisper pricing
@@ -411,6 +452,16 @@ async function logUsage(bufferLength) {
   const userId = store.get('user_id');
   if (!userId) return;
 
+  const payload = {
+    user_id: userId,
+    duration_seconds: durationSeconds,
+    cost_usd: costUsd.toFixed(6)
+  };
+  if (skill && skill.id) {
+    payload.skill_id = skill.id;
+    payload.skill_name = skill.name || '';
+  }
+
   try {
     await fetch(SUPABASE_URL + '/rest/v1/voicetype_usage', {
       method: 'POST',
@@ -419,13 +470,39 @@ async function logUsage(bufferLength) {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        user_id: userId,
-        duration_seconds: durationSeconds,
-        cost_usd: costUsd.toFixed(6)
-      })
+      body: JSON.stringify(payload)
     });
   } catch (e) {
     console.error('Failed to log usage:', e.message);
   }
+}
+
+// ─── Skill Sync ───
+
+const LINKBOARD_SKILLS_API = 'https://linkboard.vercel.app/api/voicetype/skills';
+
+async function syncSkills() {
+  const token = store.get('supabase_token');
+  if (!token) {
+    userSkills = store.get('cached_skills') || [];
+    return;
+  }
+
+  try {
+    const res = await fetch(LINKBOARD_SKILLS_API, {
+      headers: { 'Authorization': 'Bearer ' + token },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (res.ok) {
+      userSkills = await res.json();
+      store.set('cached_skills', userSkills);
+      console.log('Skills synced:', userSkills.length, 'skills');
+      return;
+    }
+  } catch (e) {
+    console.warn('Skills sync failed:', e.message);
+  }
+
+  // Fallback to cache
+  userSkills = store.get('cached_skills') || [];
 }
