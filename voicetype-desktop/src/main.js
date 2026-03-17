@@ -247,7 +247,8 @@ async function onHotkeyUp() {
       return;
     }
 
-    const text = await transcribe(apiKey, audioBuffer, settings?.language || 'en');
+    const authToken = store.get('supabase_token');
+    const text = await transcribe(apiKey, audioBuffer, settings?.language || 'en', authToken);
 
     if (text && text.trim()) {
       await injectText(text.trim(), !!settings?.auto_submit);
