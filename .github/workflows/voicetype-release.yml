@@ -11,6 +11,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -32,18 +33,18 @@ jobs:
         working-directory: voicetype-desktop
         run: npm ci || npm install
 
-      # ── macOS: Signed + Notarized build ──
-      - name: Build & Sign Electron app (macOS)
+      # ── macOS build ──
+      - name: Build Electron app (macOS)
         if: runner.os == 'macOS'
         working-directory: voicetype-desktop
         env:
-          # Code signing — Developer ID Application certificate as base64 .p12
           CSC_LINK: ${{ secrets.APPLE_CERT_P12_BASE64 }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
-          # Notarization — called by scripts/notarize.js (afterSign hook)
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Skip code signing if no certificate is provided
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.APPLE_CERT_P12_BASE64 != '' && 'true' || 'false' }}
         run: npx electron-builder --mac --publish never
 
       # ── Windows build ──
@@ -92,7 +93,8 @@ jobs:
             - **Windows**: Download the `.exe` installer and run it
 
             ### macOS Notes
-            This build is **signed and notarized** by Apple — it should open without any Gatekeeper warnings.
+            If this is a signed build, it should open without Gatekeeper warnings.
+            For unsigned builds, right-click the app and select "Open" the first time.
 
             If your IT admin is deploying via Jamf, the PPPC profile in the repo
             (`voicetype-desktop/mdm/VoiceType-PPPC.mobileconfig`) pre-approves
