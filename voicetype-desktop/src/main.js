@@ -6,7 +6,7 @@ const { app, Tray, Menu, BrowserWindow, nativeImage, ipcMain, screen } = require
 const path = require('path');
 const { registerHotkey, unregisterAll } = require('./hotkey');
 const { syncSettings, storeAuth } = require('./sync');
-const { startRecording, stopRecording } = require('./recorder');
+const { startRecording, stopRecording, checkSoxInstalled } = require('./recorder');
 const { transcribe } = require('./whisper');
 const { injectText } = require('./injector');
 const { showLoginWindow } = require('./login');
@@ -999,7 +999,22 @@ function onHotkeyDown() {
     console.error('Failed to start recording:', e);
     isRecording = false;
     hideIndicator();
-    updateTrayMenu('Mic error');
+    const isSoxMissing = e.message && e.message.includes('SoX');
+    updateTrayMenu(isSoxMissing ? 'SoX not installed' : 'Mic error');
+    const { dialog } = require('electron');
+    dialog.showMessageBox({
+      type: 'warning',
+      title: 'Recording Error',
+      message: isSoxMissing
+        ? 'SoX audio tool is required for recording.'
+        : 'Failed to start recording.',
+      detail: isSoxMissing
+        ? (process.platform === 'darwin'
+            ? 'Install it by running this in Terminal:\n\nbrew install sox\n\nThen restart VoiceType.'
+            : e.message)
+        : e.message,
+      buttons: ['OK']
+    });
   }
 }
 

@@ -4,18 +4,47 @@
 //
 // Captures audio from the system microphone into a WAV buffer.
 // Uses node-record-lpcm16 for cross-platform mic access.
-// Falls back to SoX or arecord depending on the OS.
+// Requires SoX to be installed: brew install sox
 
 const record = require('node-record-lpcm16');
+const { execFileSync } = require('child_process');
 
 let recording = null;
 let audioChunks = [];
+let soxAvailable = null; // cached check result
+
+/**
+ * Check if SoX (rec/sox) is installed and available on PATH.
+ */
+function checkSoxInstalled() {
+  if (soxAvailable !== null) return soxAvailable;
+  const cmd = process.platform === 'win32' ? 'sox' : 'rec';
+  try {
+    execFileSync(cmd, ['--version'], { stdio: 'ignore', timeout: 3000 });
+    soxAvailable = true;
+  } catch {
+    soxAvailable = false;
+  }
+  return soxAvailable;
+}
 
 /**
  * Start recording audio from the default microphone.
  * Audio is captured as 16-bit mono PCM at 16kHz (optimal for Whisper).
+ * Throws if SoX is not installed.
  */
 function startRecording() {
+  if (!checkSoxInstalled()) {
+    const installHint = process.platform === 'darwin'
+      ? 'Install it with: brew install sox'
+      : process.platform === 'win32'
+        ? 'Download SoX from https://sox.sourceforge.net and add it to PATH'
+        : 'Install it with: sudo apt install sox';
+    throw new Error(
+      `SoX audio tool is not installed. ${installHint}`
+    );
+  }
+
   audioChunks = [];
 
   recording = record.record({
@@ -95,4 +124,4 @@ function createWavBuffer(pcmData, sampleRate, channels, bitsPerSample) {
   return buffer;
 }
 
-module.exports = { startRecording, stopRecording };
+module.exports = { startRecording, stopRecording, checkSoxInstalled };
