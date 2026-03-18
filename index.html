@@ -1287,6 +1287,7 @@ body {
               <div class="vt-api-key-wrap">
                 <input type="password" id="vtAnthropicKey" placeholder="sk-ant-..." autocomplete="off">
                 <button class="btn btn-soft btn-sm" onclick="toggleVtAnthropicKeyVisibility()" id="vtAnthropicKeyToggle">Show</button>
+                <button class="btn btn-danger-ghost btn-sm" onclick="deleteVtAnthropicKey()" title="Remove Anthropic API key">Delete</button>
               </div>
               <div class="vt-hint">Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--gold);font-weight:600">console.anthropic.com</a></div>
             </div>
@@ -1348,7 +1349,7 @@ body {
           <div class="vt-card">
             <h4>Download VoiceType</h4>
             <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem">
-              A lightweight desktop app that lives in your menu bar. Hold the hotkey, speak, release — your words appear as text wherever your cursor is. No install wizard needed.
+              A lightweight desktop app that lives in your menu bar. Click the floating mic button (or hold the hotkey), speak, release — your words appear as formatted text wherever your cursor is. No install wizard needed.
             </p>
             <div class="vt-download-grid">
               <div class="vt-download-card" id="vtDownloadMac">
@@ -1372,15 +1373,45 @@ body {
           <div class="vt-card">
             <h4>Getting Started</h4>
             <ol class="vt-steps">
-              <li><strong>Download</strong> VoiceType above — on Mac, unzip and move VoiceType.app to your Documents or Applications folder</li>
-              <li><strong>Open</strong> VoiceType — on first launch, right-click the app and choose Open (macOS security prompt)</li>
+              <li><strong>Download</strong> VoiceType above — on Mac, unzip and move <code>VoiceType.app</code> to your <strong>Applications</strong> or <strong>Documents</strong> folder</li>
+              <li>
+                <strong>Open for the first time (macOS)</strong> — macOS blocks apps from unidentified developers by default. To open VoiceType:
+                <ul style="margin-top:0.4rem;font-size:0.82rem;color:var(--text-muted);list-style:disc;padding-left:1.25rem">
+                  <li><strong>Option A (right-click):</strong> Right-click <code>VoiceType.app</code> and select <strong>"Open"</strong>, then click <strong>"Open"</strong> again in the dialog</li>
+                  <li><strong>Option B (Terminal):</strong> Open Terminal and run:<br>
+                    <code style="display:inline-block;margin-top:0.3rem;background:rgba(0,0,0,0.3);padding:4px 10px;border-radius:4px;font-size:0.8rem;color:#5CEAD8">xattr -cr ~/Applications/VoiceType.app</code><br>
+                    <span style="font-size:0.78rem">(Adjust the path if you placed it elsewhere, e.g. <code>~/Documents/VoiceType.app</code>)</span>
+                  </li>
+                  <li><strong>Option C (System Settings):</strong> Go to <strong>System Settings &gt; Privacy &amp; Security</strong>, scroll down, and click <strong>"Open Anyway"</strong> next to the VoiceType message</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Allow microphone access</strong> — when prompted, click <strong>"Allow"</strong> to let VoiceType use your microphone. If you miss the prompt, go to <strong>System Settings &gt; Privacy &amp; Security &gt; Microphone</strong> and toggle VoiceType on
+              </li>
               <li><strong>Sign in</strong> with your LinkBoard account — same email and password you use here</li>
-              <li><strong>Press and hold</strong> <strong id="vtHotkeyDisplay">Ctrl/Cmd + Shift + Space</strong> to record, release to transcribe</li>
-              <li><strong>Text appears</strong> wherever your cursor is — notes, emails, documents, anywhere</li>
+              <li>
+                <strong>Use the floating mic button</strong> — a small floating button appears at the bottom of your screen:
+                <ul style="margin-top:0.4rem;font-size:0.82rem;color:var(--text-muted);list-style:disc;padding-left:1.25rem">
+                  <li><strong>Click the skill tag</strong> on the button to pick which format you want (SOAP, Email, etc.)</li>
+                  <li><strong>Click on the text field</strong> where you want the text to go</li>
+                  <li><strong>Hold the mic button</strong> and speak — release to transcribe and paste</li>
+                </ul>
+              </li>
+              <li><strong>Or use the hotkey:</strong> <strong id="vtHotkeyDisplay">Ctrl/Cmd + Shift + Space</strong> — hold to record, release to transcribe (same as clicking the mic button)</li>
             </ol>
             <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.75rem">
-              VoiceType stays in your menu bar and uses almost no resources when idle. Right-click the menu bar icon for settings.
+              VoiceType stays in your menu bar and uses almost no resources when idle. The floating button can be dragged to any position on screen. Right-click the menu bar icon for settings.
             </p>
+          </div>
+
+          <div class="vt-card">
+            <h4>Windows Setup</h4>
+            <ol class="vt-steps">
+              <li><strong>Download</strong> the Windows version above</li>
+              <li><strong>Windows SmartScreen</strong> may show a warning — click <strong>"More info"</strong> then <strong>"Run anyway"</strong></li>
+              <li><strong>Allow microphone access</strong> when prompted by Windows</li>
+              <li><strong>Sign in</strong> and start using the floating mic button or hotkey</li>
+            </ol>
           </div>
         </div>
 
@@ -4168,6 +4199,13 @@ function clearVtTranscript() {
 async function deleteVtApiKey() {
   if (!confirm('Remove your OpenAI API key? VoiceType will stop working until you add a new one.')) return;
   document.getElementById('vtApiKey').value = '';
+  await saveVtSettings();
+}
+
+async function deleteVtAnthropicKey() {
+  if (!confirm('Remove your Anthropic API key? AI-powered skill formatting will stop working until you add a new one.')) return;
+  document.getElementById('vtAnthropicKey').value = '';
+  document.getElementById('vtAnthropicBaseUrl').value = '';
   await saveVtSettings();
 }
 
