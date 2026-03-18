@@ -66,6 +66,9 @@ app.on('ready', async () => {
     registerHotkey('CommandOrControl+Shift+Space', onHotkeyDown, onHotkeyUp);
     updateTrayMenu('Ready (offline)');
   }
+
+  // Show the floating push-to-talk button (always visible)
+  showFloatingButton();
 });
 
 app.on('will-quit', () => {
@@ -185,12 +188,12 @@ function formatHotkey(key) {
     .replace(/\+/g, ' + ');
 }
 
-// ─── Recording Indicator Window (Floating Bottom Icon) ───
+// ─── Floating Push-to-Talk Button (always visible) ───
 
 function createIndicatorWindow() {
   indicatorWindow = new BrowserWindow({
-    width: 220,
-    height: 48,
+    width: 260,
+    height: 280,
     show: false,
     frame: false,
     transparent: true,
@@ -212,49 +215,91 @@ function createIndicatorWindow() {
     <head><style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body {
-        display: flex; align-items: center; justify-content: center;
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
         height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-        background: transparent; user-select: none; -webkit-app-region: drag;
+        background: transparent; user-select: none;
       }
+      .container {
+        display: flex; flex-direction: column; align-items: center; gap: 6px;
+        padding-bottom: 8px;
+      }
+
+      /* ── Skill Dropdown (appears above pill) ── */
+      .skill-menu {
+        display: none; flex-direction: column; gap: 2px;
+        background: rgba(11,37,69,0.97); border-radius: 12px;
+        padding: 6px; width: 220px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        max-height: 180px; overflow-y: auto;
+      }
+      .skill-menu.open { display: flex; }
+      .skill-menu-item {
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 10px; border-radius: 8px;
+        cursor: pointer; transition: background 0.15s;
+        -webkit-app-region: no-drag;
+      }
+      .skill-menu-item:hover { background: rgba(26,122,109,0.3); }
+      .skill-menu-item.active { background: rgba(26,122,109,0.5); }
+      .skill-menu-item .smi-name {
+        font-size: 12px; font-weight: 600; color: #fff;
+      }
+      .skill-menu-item .smi-cat {
+        font-size: 9px; font-weight: 600; color: #5CEAD8;
+        background: rgba(26,122,109,0.3); border-radius: 3px;
+        padding: 1px 5px; margin-left: auto; text-transform: uppercase;
+      }
+
+      /* ── Main Pill ── */
       .pill {
         display: flex; align-items: center; gap: 8px;
         background: rgba(11,37,69,0.95); color: #fff;
-        border-radius: 24px; padding: 8px 16px; height: 40px;
+        border-radius: 24px; padding: 8px 14px; height: 44px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         transition: all 0.2s ease;
+        -webkit-app-region: drag;
       }
-      .pill.idle {
-        padding: 8px 12px; gap: 0;
-      }
-      .icon {
-        width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+
+      /* ── Mic Button ── */
+      .mic-btn {
+        width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
         display: flex; align-items: center; justify-content: center;
-        transition: all 0.2s ease;
+        border: none; cursor: pointer; transition: all 0.15s ease;
+        -webkit-app-region: no-drag;
       }
-      .icon.recording { background: #e74c3c; animation: pulse 1s ease-in-out infinite; }
-      .icon.processing { background: #1A7A6D; animation: spin 1s linear infinite; }
-      .icon.done { background: #1A7A6D; animation: none; }
-      .icon.idle { background: #1A7A6D; animation: none; }
-      .icon svg { width: 14px; height: 14px; fill: #fff; }
-      @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.85); opacity: 0.5; } }
+      .mic-btn.idle { background: #1A7A6D; }
+      .mic-btn.idle:hover { background: #24a08e; transform: scale(1.08); }
+      .mic-btn.recording { background: #e74c3c; animation: pulse 1s ease-in-out infinite; }
+      .mic-btn.processing { background: #1A7A6D; animation: spin 1s linear infinite; pointer-events: none; }
+      .mic-btn.done { background: #1A7A6D; animation: none; }
+      .mic-btn svg { width: 16px; height: 16px; fill: #fff; pointer-events: none; }
+      @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.9); opacity: 0.6; } }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+      /* ── Label ── */
       .label {
         font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
         white-space: nowrap; overflow: hidden;
-        max-width: 150px; transition: max-width 0.3s ease, opacity 0.2s ease;
+        max-width: 0; opacity: 0;
+        transition: max-width 0.3s ease, opacity 0.2s ease;
       }
-      .pill.idle .label { max-width: 0; opacity: 0; }
+      .label.visible { max-width: 120px; opacity: 1; }
+
+      /* ── Skill Tag (click to open dropdown) ── */
       .skill-tag {
         font-size: 10px; font-weight: 700; color: #5CEAD8;
         background: rgba(26,122,109,0.4); border-radius: 4px;
-        padding: 2px 6px; white-space: nowrap; cursor: pointer;
+        padding: 3px 8px; white-space: nowrap; cursor: pointer;
         -webkit-app-region: no-drag; transition: all 0.15s ease;
+        max-width: 80px; overflow: hidden; text-overflow: ellipsis;
       }
-      .skill-tag:hover { background: rgba(26,122,109,0.6); }
-      .skill-tag.hidden { display: none; }
+      .skill-tag:hover { background: rgba(26,122,109,0.7); }
+
+      /* ── Waveform ── */
       .waveform {
-        display: flex; align-items: center; gap: 2px; height: 16px;
+        display: none; align-items: center; gap: 2px; height: 16px;
       }
+      .waveform.visible { display: flex; }
       .waveform .bar {
         width: 3px; border-radius: 2px; background: #5CEAD8;
         animation: wave 0.6s ease-in-out infinite;
@@ -264,61 +309,145 @@ function createIndicatorWindow() {
       .waveform .bar:nth-child(3) { height: 8px; animation-delay: 0.2s; }
       .waveform .bar:nth-child(4) { height: 14px; animation-delay: 0.3s; }
       .waveform .bar:nth-child(5) { height: 6px; animation-delay: 0.4s; }
-      .waveform.hidden { display: none; }
       @keyframes wave {
         0%,100% { transform: scaleY(1); } 50% { transform: scaleY(0.4); }
       }
+
+      /* ── Tooltip ── */
+      .tooltip {
+        font-size: 10px; color: rgba(255,255,255,0.5);
+        text-align: center; transition: opacity 0.2s;
+      }
     </style></head>
     <body>
-      <div class="pill" id="pill">
-        <div class="icon idle" id="icon">
-          <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+      <div class="container" id="container">
+        <!-- Skill Dropdown (pops up above the pill) -->
+        <div class="skill-menu" id="skillMenu"></div>
+
+        <!-- Main Pill -->
+        <div class="pill" id="pill">
+          <button class="mic-btn idle" id="micBtn"
+                  onmousedown="onMicDown(event)" onmouseup="onMicUp(event)" onmouseleave="onMicLeave(event)">
+            <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+          </button>
+          <div class="waveform" id="waveform">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          </div>
+          <div class="label" id="label"></div>
+          <div class="skill-tag" id="skillTag" onclick="toggleSkillMenu(event)">Raw</div>
         </div>
-        <div class="waveform hidden" id="waveform">
-          <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-        </div>
-        <div class="label" id="label"></div>
-        <div class="skill-tag hidden" id="skillTag" onclick="cycleSkill()">Raw</div>
+
+        <div class="tooltip" id="tooltip">Hold mic to record</div>
       </div>
+
       <script>
         let skills = [];
         let currentIdx = 0;
+        let menuOpen = false;
+        let isRecordingState = false;
 
         function setSkills(list, activeIdx) {
           skills = list || [];
           currentIdx = activeIdx || 0;
           updateSkillTag();
+          buildSkillMenu();
         }
 
-        function cycleSkill() {
-          if (skills.length < 2) return;
-          currentIdx = (currentIdx + 1) % skills.length;
+        function buildSkillMenu() {
+          const menu = document.getElementById('skillMenu');
+          menu.innerHTML = '';
+          skills.forEach((s, i) => {
+            const item = document.createElement('div');
+            item.className = 'skill-menu-item' + (i === currentIdx ? ' active' : '');
+            item.innerHTML = '<span class="smi-name">' + (s.name || 'Raw') + '</span>' +
+              (s.category ? '<span class="smi-cat">' + s.category + '</span>' : '');
+            item.addEventListener('click', (e) => {
+              e.stopPropagation();
+              selectSkill(i);
+              closeSkillMenu();
+            });
+            menu.appendChild(item);
+          });
+        }
+
+        function selectSkill(idx) {
+          currentIdx = idx;
           updateSkillTag();
-          if (window.voicetype) window.voicetype.setSkill(currentIdx);
+          buildSkillMenu();
+          if (window.voicetype) window.voicetype.setSkill(idx);
+        }
+
+        function toggleSkillMenu(e) {
+          if (e) e.stopPropagation();
+          if (isRecordingState) return; // don't open menu while recording
+          menuOpen = !menuOpen;
+          document.getElementById('skillMenu').classList.toggle('open', menuOpen);
+        }
+
+        function closeSkillMenu() {
+          menuOpen = false;
+          document.getElementById('skillMenu').classList.remove('open');
         }
 
         function updateSkillTag() {
           const tag = document.getElementById('skillTag');
           const skill = skills[currentIdx];
-          if (!skill) { tag.textContent = 'Raw'; return; }
-          tag.textContent = skill.name || 'Raw';
+          tag.textContent = (skill && skill.name) ? skill.name : 'Raw';
         }
 
+        // ── Push-to-Talk (mouse) ──
+        function onMicDown(e) {
+          if (e.button !== 0) return; // left click only
+          if (isRecordingState) return;
+          closeSkillMenu();
+          if (window.voicetype) window.voicetype.pushToTalkStart();
+        }
+
+        function onMicUp(e) {
+          if (e.button !== 0) return;
+          if (window.voicetype) window.voicetype.pushToTalkStop();
+        }
+
+        function onMicLeave(e) {
+          // If user drags mouse off button while holding, stop recording
+          if (isRecordingState) {
+            if (window.voicetype) window.voicetype.pushToTalkStop();
+          }
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+          if (menuOpen && !e.target.closest('.skill-menu') && !e.target.closest('.skill-tag')) {
+            closeSkillMenu();
+          }
+        });
+
         function setState(state, labelText, showSkill) {
-          const pill = document.getElementById('pill');
-          const icon = document.getElementById('icon');
+          const btn = document.getElementById('micBtn');
           const label = document.getElementById('label');
           const tag = document.getElementById('skillTag');
           const wave = document.getElementById('waveform');
+          const tooltip = document.getElementById('tooltip');
 
-          pill.classList.remove('idle');
-          icon.className = 'icon ' + state;
+          btn.className = 'mic-btn ' + state;
           label.textContent = labelText || '';
-          tag.classList.toggle('hidden', !showSkill);
-          wave.classList.toggle('hidden', state !== 'recording');
+          label.classList.toggle('visible', !!labelText);
+          wave.classList.toggle('visible', state === 'recording');
+
+          isRecordingState = (state === 'recording');
 
           if (state === 'idle') {
-            pill.classList.add('idle');
+            tooltip.textContent = 'Hold mic to record';
+            tooltip.style.opacity = '1';
+          } else if (state === 'recording') {
+            tooltip.textContent = 'Release to stop';
+            tooltip.style.opacity = '1';
+          } else if (state === 'processing') {
+            tooltip.textContent = '';
+            tooltip.style.opacity = '0';
+          } else if (state === 'done') {
+            tooltip.textContent = 'Pasted to clipboard';
+            tooltip.style.opacity = '1';
           }
         }
       </script>
@@ -328,8 +457,8 @@ function createIndicatorWindow() {
 
   // Position at bottom-center of primary display
   const display = screen.getPrimaryDisplay();
-  const x = Math.round(display.bounds.x + display.bounds.width / 2 - 110);
-  const y = display.bounds.y + display.bounds.height - 80;
+  const x = Math.round(display.bounds.x + display.bounds.width / 2 - 130);
+  const y = display.bounds.y + display.bounds.height - 100;
   indicatorWindow.setPosition(x, y);
 }
 
@@ -349,9 +478,21 @@ function showIndicator(text, opts = {}) {
 
 function hideIndicator() {
   if (!indicatorWindow) return;
-  // Shrink to idle state (small green icon) then hide after delay
+  // Return to idle state (floating button stays visible for push-to-talk)
   indicatorWindow.webContents.executeJavaScript(`setState('idle', '', false);`);
-  setTimeout(() => { if (indicatorWindow) indicatorWindow.hide(); }, 300);
+}
+
+function showFloatingButton() {
+  if (!indicatorWindow) return;
+  // Send skills to indicator and show in idle state
+  const skillList = userSkills.map(s => ({ name: s.name, category: s.category, system_prompt: !!s.system_prompt }));
+  const defaultIdx = userSkills.findIndex(s => s.is_default);
+  const activeIdx = defaultIdx >= 0 ? defaultIdx : 0;
+  indicatorWindow.webContents.executeJavaScript(
+    `setSkills(${JSON.stringify(skillList)}, ${activeIdx});`
+  );
+  indicatorWindow.webContents.executeJavaScript(`setState('idle', '', false);`);
+  indicatorWindow.show();
 }
 
 // ─── Full-Screen Dashboard Window ───
@@ -789,6 +930,15 @@ function getDashboardHTML() {
 // IPC: indicator skill selector sends index back to main process
 ipcMain.on('skill-select', (_event, idx) => {
   selectedSkillIdx = idx;
+});
+
+// IPC: Push-to-Talk (mouse-based recording from floating button)
+ipcMain.on('push-to-talk-start', () => {
+  onHotkeyDown();
+});
+
+ipcMain.on('push-to-talk-stop', () => {
+  onHotkeyUp();
 });
 
 // IPC: dashboard actions
