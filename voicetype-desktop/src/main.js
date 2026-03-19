@@ -461,23 +461,31 @@ function createIndicatorWindow() {
         let mediaRecorder = null;
         let browserChunks = [];
         let audioCtx = null;
+        let recorderReady = null; // Promise that resolves when MediaRecorder is ready
 
         if (window.voicetype && window.voicetype.onStartBrowserRecording) {
           window.voicetype.onStartBrowserRecording(async () => {
-            try {
-              const stream = await navigator.mediaDevices.getUserMedia({
-                audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
-              });
-              browserChunks = [];
-              mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-              mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) browserChunks.push(e.data); };
-              mediaRecorder.start(100); // collect in 100ms chunks
-            } catch (err) {
-              console.error('Browser recording failed:', err);
-            }
+            recorderReady = (async () => {
+              try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                  audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+                });
+                browserChunks = [];
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) browserChunks.push(e.data); };
+                mediaRecorder.start(100); // collect in 100ms chunks
+                return true;
+              } catch (err) {
+                console.error('Browser recording failed:', err);
+                return false;
+              }
+            })();
           });
 
           window.voicetype.onStopBrowserRecording(async () => {
+            // Wait for getUserMedia/MediaRecorder to be ready before stopping
+            if (recorderReady) await recorderReady;
+
             if (!mediaRecorder || mediaRecorder.state === 'inactive') {
               window.voicetype.sendAudioData(null);
               return;
