@@ -112,4 +112,33 @@ function clearAuth(store) {
   store.delete('cached_settings');
 }
 
-module.exports = { syncSettings, storeAuth, clearAuth };
+/**
+ * Save a subset of settings back to LinkBoard API.
+ * @param {import('electron-store')} store
+ * @param {Object} updates - key/value pairs to update (e.g. { transcription_mode: 'local' })
+ */
+async function saveSettings(store, updates) {
+  const token = store.get('supabase_token');
+  if (!token) throw new Error('Not signed in');
+
+  const res = await fetch(LINKBOARD_API, {
+    method: 'PUT',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(updates),
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error('Save failed: ' + text);
+  }
+  // Update local cache
+  const cached = store.get('cached_settings') || {};
+  Object.assign(cached, updates);
+  store.set('cached_settings', cached);
+  return cached;
+}
+
+module.exports = { syncSettings, saveSettings, storeAuth, clearAuth };

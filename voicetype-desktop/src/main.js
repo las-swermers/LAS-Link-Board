@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { registerHotkey, unregisterAll } = require('./hotkey');
-const { syncSettings, storeAuth } = require('./sync');
+const { syncSettings, saveSettings, storeAuth } = require('./sync');
 const { startRecording, stopRecording, checkSoxInstalled, onBrowserAudioData, isBrowserRecording } = require('./recorder');
 const { transcribe } = require('./whisper');
 const { injectText } = require('./injector');
@@ -87,6 +87,9 @@ app.on('ready', async () => {
     registerHotkey('CommandOrControl+Shift+Space', onHotkeyDown, onHotkeyUp);
     updateTrayMenu('Ready (offline)');
   }
+
+  // Refresh dashboard with latest auth and settings state
+  openDashboard();
 
   // Show the floating push-to-talk button (always visible)
   showFloatingButton();
@@ -193,6 +196,7 @@ function updateTrayMenu(statusText) {
           clearAuth(store);
           settings = null;
           updateTrayMenu('Signed out');
+          openDashboard();
         } else {
           try {
             const auth = await showLoginWindow();
@@ -202,10 +206,22 @@ function updateTrayMenu(statusText) {
             unregisterAll();
             registerHotkey(settings?.hotkey || 'CommandOrControl+Shift+Space', onHotkeyDown, onHotkeyUp);
             updateTrayMenu('Ready');
+            openDashboard();
           } catch (e) {
             // Login window closed
           }
         }
+      }
+    },
+    {
+      label: indicatorWindow && indicatorWindow.isVisible() ? 'Hide Floating Pill' : 'Show Floating Pill',
+      click: () => {
+        if (indicatorWindow && indicatorWindow.isVisible()) {
+          indicatorWindow.hide();
+        } else {
+          showFloatingButton();
+        }
+        updateTrayMenu(statusText);
       }
     },
     { type: 'separator' },
@@ -718,6 +734,12 @@ function getDashboardHTML() {
   .sidebar-footer {
     padding: 16px; border-top: 1px solid var(--border);
   }
+  .btn-quit {
+    margin-top: 12px; width: 100%; padding: 7px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--text3); transition: all 0.15s ease;
+  }
+  .btn-quit:hover { background: rgba(231,76,60,0.15); color: #e74c3c; border-color: rgba(231,76,60,0.3); }
   .status-badge {
     display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2);
   }
@@ -841,6 +863,7 @@ function getDashboardHTML() {
         <div class="status-dot" id="statusDot"></div>
         <span id="statusText">Ready</span>
       </div>
+      <button class="btn-quit" onclick="quitApp()">Quit VoiceType</button>
     </div>
   </div>
 
@@ -930,11 +953,24 @@ function getDashboardHTML() {
           <h3>Transcription</h3>
           <div class="card-row">
             <span class="label">Mode</span>
-            <span class="value" id="settingsMode">Cloud</span>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="value" id="settingsMode" style="min-width:80px">Cloud</span>
+              <button class="btn btn-ghost" id="modeToggleBtn" onclick="toggleMode()" style="padding:5px 12px;font-size:12px;">Switch to Local</button>
+            </div>
           </div>
           <div class="card-row">
             <span class="label">Local Whisper Model</span>
             <span class="value" id="localModelStatus">Not downloaded</span>
+          </div>
+          <div id="modeHint" style="font-size:11px;color:var(--text3);padding:8px 0 0;line-height:1.5;display:none;">
+            Local mode processes audio on-device (HIPAA-safe). Requires ~150 MB model download from the tray menu.
+          </div>
+        </div>
+        <div class="card">
+          <h3>Interface</h3>
+          <div class="card-row">
+            <span class="label">Floating Pill (push-to-talk button)</span>
+            <div class="toggle on" id="pillToggle" onclick="togglePill()"></div>
           </div>
         </div>
         <div class="card">
@@ -982,6 +1018,31 @@ function getDashboardHTML() {
       document.querySelector('[data-page="' + name + '"]').classList.add('active');
     }
 
+    function quitApp() {
+      if (window.dashboard) window.dashboard.quitApp();
+    }
+
+    function togglePill() {
+      const toggle = document.getElementById('pillToggle');
+      toggle.classList.toggle('on');
+      if (window.dashboard) window.dashboard.togglePill(toggle.classList.contains('on'));
+    }
+
+    function toggleMode() {
+      const modeEl = document.getElementById('settingsMode');
+      const activeEl = document.getElementById('activeMode');
+      const btn = document.getElementById('modeToggleBtn');
+      const hint = document.getElementById('modeHint');
+      const isCloud = modeEl.textContent === 'Cloud';
+      const newMode = isCloud ? 'local' : 'cloud';
+      const newLabel = isCloud ? 'Local (HIPAA)' : 'Cloud';
+      modeEl.textContent = newLabel;
+      if (activeEl) activeEl.textContent = newLabel;
+      btn.textContent = isCloud ? 'Switch to Cloud' : 'Switch to Local';
+      hint.style.display = isCloud ? 'block' : 'none';
+      if (window.dashboard) window.dashboard.setMode(newMode);
+    }
+
     function openLinkBoard() {
       if (window.dashboard) window.dashboard.openLinkBoard();
     }
@@ -1008,8 +1069,12 @@ function getDashboardHTML() {
       const modeName = data.mode === 'local' ? 'Local (HIPAA)' : 'Cloud';
       const modeEl = document.getElementById('activeMode');
       const settingsModeEl = document.getElementById('settingsMode');
+      const modeBtnEl = document.getElementById('modeToggleBtn');
+      const modeHintEl = document.getElementById('modeHint');
       if (modeEl) modeEl.textContent = modeName;
       if (settingsModeEl) settingsModeEl.textContent = modeName;
+      if (modeBtnEl) modeBtnEl.textContent = data.mode === 'local' ? 'Switch to Cloud' : 'Switch to Local';
+      if (modeHintEl) modeHintEl.style.display = data.mode === 'local' ? 'block' : 'none';
 
       // Local model
       const localEl = document.getElementById('localModelStatus');
@@ -1102,6 +1167,32 @@ ipcMain.on('dashboard-refresh-settings', async () => {
 ipcMain.on('dashboard-toggle-autosubmit', (_event, on) => {
   if (settings) settings.auto_submit = on;
   store.set('auto_submit', on);
+});
+
+ipcMain.on('dashboard-set-mode', async (_event, mode) => {
+  if (settings) settings.transcription_mode = mode;
+  try {
+    await saveSettings(store, { transcription_mode: mode });
+    updateTrayMenu('Ready');
+    console.log('Mode saved:', mode);
+  } catch (e) {
+    console.error('Failed to save mode:', e.message);
+  }
+});
+
+ipcMain.on('dashboard-toggle-pill', (_event, on) => {
+  if (on) {
+    showFloatingButton();
+  } else if (indicatorWindow) {
+    indicatorWindow.hide();
+  }
+});
+
+ipcMain.on('dashboard-quit', () => {
+  if (indicatorWindow) { indicatorWindow.destroy(); indicatorWindow = null; }
+  if (dashboardWindow) { dashboardWindow.removeAllListeners('close'); dashboardWindow.destroy(); dashboardWindow = null; }
+  if (tray) { tray.destroy(); tray = null; }
+  app.quit();
 });
 
 ipcMain.on('dashboard-select-skill', (_event, idx) => {
