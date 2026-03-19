@@ -90,18 +90,21 @@ module.exports = async (req, res) => {
       );
       const existing = existRes.ok ? await existRes.json() : [];
 
+      // Merge with existing values so partial updates don't reset other fields
+      const prev = existing.length > 0 ? existing[0] : {};
+
       const payload = {
         user_id: user.id,
-        hotkey: hotkey || 'CommandOrControl+Shift+Space',
-        language: language || 'en',
-        auto_submit: !!auto_submit,
-        transcription_mode: transcription_mode || 'cloud',
-        soap_notes: !!soap_notes,
-        active_skill_id: active_skill_id || null,
-        anthropic_base_url: anthropic_base_url || '',
-        // Encrypt API keys before storing
-        openai_api_key: encrypt(openai_api_key || ''),
-        anthropic_api_key: encrypt(anthropic_api_key || ''),
+        hotkey: hotkey !== undefined ? hotkey : (prev.hotkey || 'CommandOrControl+Shift+Space'),
+        language: language !== undefined ? language : (prev.language || 'en'),
+        auto_submit: auto_submit !== undefined ? !!auto_submit : !!prev.auto_submit,
+        transcription_mode: transcription_mode !== undefined ? transcription_mode : (prev.transcription_mode || 'cloud'),
+        soap_notes: soap_notes !== undefined ? !!soap_notes : !!prev.soap_notes,
+        active_skill_id: active_skill_id !== undefined ? (active_skill_id || null) : (prev.active_skill_id || null),
+        anthropic_base_url: anthropic_base_url !== undefined ? (anthropic_base_url || '') : (prev.anthropic_base_url || ''),
+        // Encrypt API keys before storing — only update if provided
+        openai_api_key: openai_api_key !== undefined ? encrypt(openai_api_key || '') : (prev.openai_api_key || ''),
+        anthropic_api_key: anthropic_api_key !== undefined ? encrypt(anthropic_api_key || '') : (prev.anthropic_api_key || ''),
         updated_at: new Date().toISOString()
       };
 
