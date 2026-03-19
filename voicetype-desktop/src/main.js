@@ -23,9 +23,14 @@ let settings = null;
 let userSkills = [];       // user's skill list from Supabase
 let selectedSkillIdx = 0;  // index into userSkills for the indicator selector
 
-// Prevent multiple instances
+// Prevent multiple instances — if another instance launches, focus this one
 const gotLock = app.requestSingleInstanceLock();
-if (!gotLock) { app.quit(); }
+if (!gotLock) { app.quit(); } else {
+  app.on('second-instance', () => {
+    // User tried to open the app again — show the dashboard
+    openDashboard();
+  });
+}
 
 app.on('ready', async () => {
   // Hide dock icon on macOS — shows when dashboard is open
@@ -84,6 +89,17 @@ app.on('will-quit', () => {
 // Don't quit when all windows close (tray app)
 app.on('window-all-closed', (e) => {
   e.preventDefault();
+});
+
+// macOS: re-show the app when clicking the dock icon
+app.on('activate', () => {
+  if (indicatorWindow) {
+    showFloatingButton();
+  } else {
+    createIndicatorWindow();
+    showFloatingButton();
+  }
+  openDashboard();
 });
 
 // ─── Tray ───
@@ -183,7 +199,14 @@ function updateTrayMenu(statusText) {
       }
     },
     { type: 'separator' },
-    { label: 'Quit VoiceType', click: () => app.quit() }
+    { label: 'Quit VoiceType', click: () => {
+        // Destroy all windows so the app fully exits
+        if (indicatorWindow) { indicatorWindow.destroy(); indicatorWindow = null; }
+        if (dashboardWindow) { dashboardWindow.removeAllListeners('close'); dashboardWindow.destroy(); dashboardWindow = null; }
+        if (tray) { tray.destroy(); tray = null; }
+        app.quit();
+      }
+    }
   ]);
   tray.setContextMenu(menu);
 }
