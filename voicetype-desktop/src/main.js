@@ -24,6 +24,7 @@ let isRecording = false;
 let settings = null;
 let userSkills = [];       // user's skill list from Supabase
 let selectedSkillIdx = 0;  // index into userSkills for the indicator selector
+let pillSkillOverride = false; // true when user explicitly picked a skill on the pill
 
 // Prevent multiple instances — if another instance launches, focus this one
 const gotLock = app.requestSingleInstanceLock();
@@ -534,41 +535,48 @@ function createIndicatorWindow() {
         }
 
         // ── Browser-based audio recording (fallback when SoX not installed) ──
+        // Pre-warm the microphone stream so recording starts instantly.
+        let micStream = null;        // persistent getUserMedia stream
         let mediaRecorder = null;
         let browserChunks = [];
         let audioCtx = null;
-        let recorderReady = null; // Promise that resolves when MediaRecorder is ready
+
+        // Pre-initialise mic stream on page load so first recording has no delay
+        (async () => {
+          try {
+            micStream = await navigator.mediaDevices.getUserMedia({
+              audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+            });
+          } catch (err) {
+            console.warn('Mic pre-init failed (will retry on first recording):', err);
+          }
+        })();
 
         if (window.voicetype && window.voicetype.onStartBrowserRecording) {
           window.voicetype.onStartBrowserRecording(async () => {
-            recorderReady = (async () => {
-              try {
-                const stream = await navigator.mediaDevices.getUserMedia({
+            try {
+              // Re-acquire stream if it was lost or never obtained
+              if (!micStream || micStream.getTracks().every(t => t.readyState === 'ended')) {
+                micStream = await navigator.mediaDevices.getUserMedia({
                   audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
                 });
-                browserChunks = [];
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) browserChunks.push(e.data); };
-                mediaRecorder.start(100); // collect in 100ms chunks
-                return true;
-              } catch (err) {
-                console.error('Browser recording failed:', err);
-                return false;
               }
-            })();
+              browserChunks = [];
+              mediaRecorder = new MediaRecorder(micStream, { mimeType: 'audio/webm;codecs=opus' });
+              mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) browserChunks.push(e.data); };
+              mediaRecorder.start(100); // collect in 100ms chunks
+            } catch (err) {
+              console.error('Browser recording failed:', err);
+            }
           });
 
           window.voicetype.onStopBrowserRecording(async () => {
-            // Wait for getUserMedia/MediaRecorder to be ready before stopping
-            if (recorderReady) await recorderReady;
-
             if (!mediaRecorder || mediaRecorder.state === 'inactive') {
               window.voicetype.sendAudioData(null);
               return;
             }
             mediaRecorder.onstop = async () => {
-              // Stop all tracks to release the mic
-              mediaRecorder.stream.getTracks().forEach(t => t.stop());
+              // Do NOT stop mic tracks — keep stream alive for next recording
               if (browserChunks.length === 0) { window.voicetype.sendAudioData(null); return; }
 
               const webmBlob = new Blob(browserChunks, { type: 'audio/webm' });
@@ -1153,6 +1161,7 @@ function getDashboardHTML() {
 // IPC: indicator skill selector sends index back to main process
 ipcMain.on('skill-select', (_event, idx) => {
   selectedSkillIdx = idx;
+  pillSkillOverride = true; // user explicitly chose a skill on the pill
 });
 
 // IPC: Hide floating pill (close button on indicator)
@@ -1229,8 +1238,16 @@ ipcMain.on('dashboard-quit', () => {
 
 ipcMain.on('dashboard-select-skill', (_event, idx) => {
   selectedSkillIdx = idx;
+  pillSkillOverride = false; // dashboard change resets pill override
   // Mark as default locally
   userSkills.forEach((s, i) => { s.is_default = (i === idx); });
+  // Update pill to reflect the new default
+  if (indicatorWindow) {
+    const skillList = userSkills.map(s => ({ name: s.name, category: s.category, system_prompt: !!s.system_prompt }));
+    indicatorWindow.webContents.executeJavaScript(
+      `setSkills(${JSON.stringify(skillList)}, ${selectedSkillIdx});`
+    );
+  }
   if (dashboardWindow && dashboardWindow.isVisible()) openDashboard();
 });
 
@@ -1240,11 +1257,13 @@ function onHotkeyDown() {
   if (isRecording) return;
   isRecording = true;
 
-  // Reset skill selector to user's default (or first skill)
-  const defaultIdx = userSkills.findIndex(s => s.is_default);
-  selectedSkillIdx = defaultIdx >= 0 ? defaultIdx : 0;
+  // Only reset to dashboard default if the user hasn't picked a skill on the pill
+  if (!pillSkillOverride) {
+    const defaultIdx = userSkills.findIndex(s => s.is_default);
+    selectedSkillIdx = defaultIdx >= 0 ? defaultIdx : 0;
+  }
 
-  // Send skills list to indicator window
+  // Send skills list to indicator window (preserves pill selection if user changed it)
   if (indicatorWindow) {
     const skillList = userSkills.map(s => ({ name: s.name, category: s.category, system_prompt: !!s.system_prompt }));
     indicatorWindow.webContents.executeJavaScript(
