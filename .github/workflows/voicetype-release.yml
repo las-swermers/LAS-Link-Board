@@ -41,21 +41,20 @@ jobs:
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#voicetype-v}"
           echo "::notice::Setting version to $TAG_VERSION from tag $GITHUB_REF_NAME"
-          node -e "
-            const fs = require('fs');
-            const v = '$TAG_VERSION';
-            // Patch package.json
-            const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
-            pkg.version = v;
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-            // Patch package-lock.json
-            const lock = JSON.parse(fs.readFileSync('package-lock.json','utf8'));
-            lock.version = v;
-            if (lock.packages && lock.packages['']) lock.packages[''].version = v;
-            fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
-            console.log('package.json version:', pkg.version);
-            console.log('package-lock.json version:', lock.version);
-          "
+          cat > /tmp/set-version.js << 'SCRIPT'
+          const fs = require('fs');
+          const v = process.argv[1];
+          const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
+          pkg.version = v;
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          const lock = JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+          lock.version = v;
+          if (lock.packages && lock.packages['']) lock.packages[''].version = v;
+          fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
+          console.log('Set version to', v);
+          SCRIPT
+          node /tmp/set-version.js "$TAG_VERSION"
+          echo "Verify: $(node -p "require('./package.json').version")"
 
       # ── macOS build (unsigned — no Apple certs configured) ──
       - name: Build Electron app (macOS)
