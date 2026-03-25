@@ -33,14 +33,29 @@ jobs:
         working-directory: voicetype-desktop
         run: npm ci || npm install
 
-      # Sync package version from the git tag (e.g. voicetype-v2.7.4 → 2.7.4)
+      # Force-set version from git tag in BOTH package.json and package-lock.json
+      # This ensures electron-builder uses the correct version in filenames
       - name: Set version from tag
         working-directory: voicetype-desktop
         shell: bash
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#voicetype-v}"
-          echo "Setting version to $TAG_VERSION"
-          npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
+          echo "::notice::Setting version to $TAG_VERSION from tag $GITHUB_REF_NAME"
+          node -e "
+            const fs = require('fs');
+            const v = '$TAG_VERSION';
+            // Patch package.json
+            const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
+            pkg.version = v;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            // Patch package-lock.json
+            const lock = JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+            lock.version = v;
+            if (lock.packages && lock.packages['']) lock.packages[''].version = v;
+            fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
+            console.log('package.json version:', pkg.version);
+            console.log('package-lock.json version:', lock.version);
+          "
 
       # ── macOS build (unsigned — no Apple certs configured) ──
       - name: Build Electron app (macOS)
