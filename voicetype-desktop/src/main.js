@@ -698,7 +698,7 @@ function createDashboardWindow() {
     show: false,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 16 },
-    backgroundColor: '#0B2545',
+    backgroundColor: '#F8F9FA',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -721,18 +721,24 @@ function openDashboard() {
   if (!dashboardWindow) createDashboardWindow();
   if (process.platform === 'darwin') app.dock.show();
 
-  // Send current state to dashboard
-  dashboardWindow.webContents.executeJavaScript(`
-    if (window.__updateDashboard) window.__updateDashboard(${JSON.stringify({
-      settings: settings || {},
-      skills: userSkills,
-      hotkey: settings?.hotkey || 'CommandOrControl+Shift+Space',
-      mode: settings?.transcription_mode || 'cloud',
-      localModelReady: localWhisper.isModelDownloaded(),
-      whisperCppReady: isWhisperCppAvailable(),
-      isLoggedIn: !!store.get('user_id')
-    })});
-  `);
+  const dashData = JSON.stringify({
+    settings: settings || {},
+    skills: userSkills,
+    hotkey: settings?.hotkey || 'CommandOrControl+Shift+Space',
+    mode: settings?.transcription_mode || 'cloud',
+    localModelReady: localWhisper.isModelDownloaded(),
+    whisperCppReady: isWhisperCppAvailable(),
+    isLoggedIn: !!store.get('user_id')
+  });
+
+  // Send current state to dashboard (retry after short delay for page load)
+  const sendData = () => {
+    dashboardWindow.webContents.executeJavaScript(
+      `if (window.__updateDashboard) window.__updateDashboard(${dashData});`
+    );
+  };
+  sendData();
+  setTimeout(sendData, 300);
 
   dashboardWindow.show();
   dashboardWindow.focus();
@@ -745,10 +751,12 @@ function getDashboardHTML() {
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0B2545; --surface: #0F3460; --surface2: #163A6A;
-    --teal: #1A7A6D; --teal-light: #5CEAD8; --gold: #C5963B;
-    --text: #FFFFFF; --text2: rgba(255,255,255,0.7); --text3: rgba(255,255,255,0.4);
-    --border: rgba(255,255,255,0.1);
+    --navy: #0B2545; --navy-light: #134074;
+    --gold: #C5963B; --gold-hover: #B5862E; --gold-light: #FBF5E9;
+    --teal: #13507C; --teal-light: #E8F1F8;
+    --bg: #F8F9FA; --surface: #FFFFFF; --surface2: #F0F2F5;
+    --text: #0B2545; --text2: #5A6A7E; --text3: #9CA8B7;
+    --border: rgba(11,37,69,0.1);
   }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
@@ -758,37 +766,38 @@ function getDashboardHTML() {
 
   /* Sidebar */
   .sidebar {
-    width: 240px; background: rgba(0,0,0,0.2); border-right: 1px solid var(--border);
+    width: 240px; background: var(--navy); border-right: none;
     display: flex; flex-direction: column; padding-top: 52px;
+    background-image: linear-gradient(135deg, #0B2545 0%, #134074 100%);
   }
   .sidebar-header {
-    padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+    padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1);
   }
   .sidebar-header h1 {
-    font-size: 18px; font-weight: 700; letter-spacing: -0.02em;
+    font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: #fff;
   }
-  .sidebar-header .subtitle { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .sidebar-header .subtitle { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
   .nav { flex: 1; padding: 12px 8px; }
   .nav-item {
     display: flex; align-items: center; gap: 10px; padding: 10px 14px;
     border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500;
-    color: var(--text2); transition: all 0.15s ease; margin-bottom: 2px;
+    color: rgba(255,255,255,0.7); transition: all 0.15s ease; margin-bottom: 2px;
   }
-  .nav-item:hover { background: rgba(255,255,255,0.06); color: var(--text); }
-  .nav-item.active { background: var(--teal); color: #fff; font-weight: 600; }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-item.active { background: var(--gold); color: #fff; font-weight: 600; }
   .nav-item svg { width: 18px; height: 18px; opacity: 0.7; }
   .nav-item.active svg { opacity: 1; }
   .sidebar-footer {
-    padding: 16px; border-top: 1px solid var(--border);
+    padding: 16px; border-top: 1px solid rgba(255,255,255,0.1);
   }
   .btn-quit {
     margin-top: 12px; width: 100%; padding: 7px 12px; border-radius: 8px;
-    font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border);
-    background: transparent; color: var(--text3); transition: all 0.15s ease;
+    font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.15);
+    background: transparent; color: rgba(255,255,255,0.5); transition: all 0.15s ease;
   }
   .btn-quit:hover { background: rgba(231,76,60,0.15); color: #e74c3c; border-color: rgba(231,76,60,0.3); }
   .status-badge {
-    display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2);
+    display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.7);
   }
   .status-dot {
     width: 8px; height: 8px; border-radius: 50%; background: #27ae60;
@@ -800,22 +809,23 @@ function getDashboardHTML() {
   .main-header {
     padding: 52px 32px 0; display: flex; align-items: center; justify-content: space-between;
   }
-  .main-header h2 { font-size: 24px; font-weight: 700; }
+  .main-header h2 { font-size: 24px; font-weight: 700; color: var(--navy); }
   .content { flex: 1; overflow-y: auto; padding: 24px 32px 32px; }
 
   /* Cards */
   .card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 16px; padding: 24px; margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
-  .card h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+  .card h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: var(--navy); }
   .card-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 0; border-bottom: 1px solid var(--border);
   }
   .card-row:last-child { border-bottom: none; }
   .card-row .label { font-size: 13px; color: var(--text2); }
-  .card-row .value { font-size: 13px; font-weight: 600; }
+  .card-row .value { font-size: 13px; font-weight: 600; color: var(--text); }
 
   /* Hotkey Display */
   .hotkey-display {
@@ -824,7 +834,7 @@ function getDashboardHTML() {
   .key {
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600;
-    font-family: 'SF Mono', monospace;
+    font-family: 'SF Mono', monospace; color: var(--navy);
   }
 
   /* Skills Grid */
@@ -833,15 +843,15 @@ function getDashboardHTML() {
     gap: 12px; margin-top: 16px;
   }
   .skill-card {
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--surface); border: 1px solid var(--border);
     border-radius: 12px; padding: 16px; cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.15s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
-  .skill-card:hover { border-color: var(--teal); transform: translateY(-1px); }
-  .skill-card.active { border-color: var(--teal-light); background: rgba(26,122,109,0.15); }
-  .skill-card .skill-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .skill-card:hover { border-color: var(--gold); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(197,150,59,0.12); }
+  .skill-card.active { border-color: var(--gold); background: var(--gold-light); }
+  .skill-card .skill-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: var(--navy); }
   .skill-card .skill-category {
-    font-size: 11px; color: var(--teal-light); text-transform: uppercase;
+    font-size: 11px; color: var(--gold); text-transform: uppercase;
     letter-spacing: 0.05em; font-weight: 700;
   }
   .skill-card .skill-desc {
@@ -853,20 +863,21 @@ function getDashboardHTML() {
     padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
     cursor: pointer; border: none; transition: all 0.15s ease;
   }
-  .btn-primary { background: var(--teal); color: #fff; }
-  .btn-primary:hover { background: #1F8E7F; }
+  .btn-primary { background: var(--gold); color: #fff; }
+  .btn-primary:hover { background: var(--gold-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(197,150,59,0.3); }
   .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
-  .btn-ghost:hover { background: rgba(255,255,255,0.06); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
 
   /* Toggle */
   .toggle {
-    width: 44px; height: 24px; border-radius: 12px; background: rgba(255,255,255,0.15);
+    width: 44px; height: 24px; border-radius: 12px; background: #D1D5DB;
     cursor: pointer; position: relative; transition: background 0.2s;
   }
-  .toggle.on { background: var(--teal); }
+  .toggle.on { background: var(--gold); }
   .toggle::after {
     content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%;
     background: #fff; top: 3px; left: 3px; transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
   }
   .toggle.on::after { transform: translateX(20px); }
 
@@ -875,16 +886,22 @@ function getDashboardHTML() {
   .page.active { display: block; }
 
   /* Form inputs */
+  input[type="text"], textarea, select {
+    background: var(--surface2) !important; color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+  }
   input[type="text"]:focus, textarea:focus, select:focus {
-    border-color: var(--teal) !important;
+    border-color: var(--gold) !important; outline: none;
+    box-shadow: 0 0 0 3px rgba(197,150,59,0.15);
   }
   select option { background: var(--surface); color: var(--text); }
+  ::placeholder { color: var(--text3) !important; }
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+  ::-webkit-scrollbar-thumb { background: rgba(11,37,69,0.15); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(11,37,69,0.3); }
 </style>
 </head>
 <body>
@@ -935,7 +952,7 @@ function getDashboardHTML() {
           </div>
           <div class="card-row">
             <span class="label">Active Skill</span>
-            <span class="value" id="activeSkill" style="color: var(--teal-light)">Raw Transcript</span>
+            <span class="value" id="activeSkill" style="color: var(--gold)">Raw Transcript</span>
           </div>
           <div class="card-row">
             <span class="label">Transcription Mode</span>
@@ -943,7 +960,7 @@ function getDashboardHTML() {
           </div>
           <div class="card-row">
             <span class="label">Text Injection</span>
-            <span class="value" style="color: var(--teal-light)">Paste at cursor + clipboard</span>
+            <span class="value" style="color: var(--teal)">Paste at cursor + clipboard</span>
           </div>
         </div>
         <div class="card">
@@ -1027,7 +1044,7 @@ function getDashboardHTML() {
             <button class="btn btn-primary" id="editorSaveBtn" onclick="saveSkill()">Save</button>
             <button class="btn btn-ghost" id="editorDeleteBtn" onclick="deleteSkill()" style="display:none;color:#e74c3c;border-color:rgba(231,76,60,0.3);">Delete</button>
           </div>
-          <div id="editorStatus" style="font-size:12px;margin-top:8px;color:var(--teal-light);display:none;"></div>
+          <div id="editorStatus" style="font-size:12px;margin-top:8px;color:#27ae60;display:none;"></div>
         </div>
       </div>
     </div>
@@ -1189,10 +1206,10 @@ function getDashboardHTML() {
       if (localEl) {
         if (data.whisperCppReady) {
           localEl.textContent = 'whisper.cpp ready (native Metal)';
-          localEl.style.color = 'var(--teal-light)';
+          localEl.style.color = '#27ae60';
         } else if (data.localModelReady) {
           localEl.textContent = 'ONNX model ready (slower)';
-          localEl.style.color = 'var(--gold)';
+          localEl.style.color = 'var(--gold-hover)';
         } else {
           localEl.textContent = 'Not installed';
           localEl.style.color = 'var(--text3)';
@@ -1290,7 +1307,7 @@ function getDashboardHTML() {
     function showEditorStatus(msg, isError) {
       const el = document.getElementById('editorStatus');
       el.textContent = msg;
-      el.style.color = isError ? '#e74c3c' : 'var(--teal-light)';
+      el.style.color = isError ? '#e74c3c' : '#27ae60';
       el.style.display = 'block';
       if (!isError) setTimeout(() => { el.style.display = 'none'; }, 3000);
     }
