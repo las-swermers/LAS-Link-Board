@@ -14,6 +14,7 @@ const { injectText } = require('./injector');
 const { showLoginWindow } = require('./login');
 const localWhisper = require('./local-whisper');
 const { processTranscription, PRESET_SKILLS } = require('./skill-formatter');
+const { isWhisperCppAvailable } = require('./whisper');
 const Store = require('electron-store');
 
 const store = new Store({ name: 'voicetype-config' });
@@ -155,7 +156,7 @@ function updateTrayMenu(statusText) {
       }
     },
     {
-      label: 'Mode: ' + (settings?.transcription_mode === 'local' ? 'Local (HIPAA)' : 'Cloud'),
+      label: 'Mode: ' + ({ local: 'Local (HIPAA)', groq: 'Groq (Fast)', cloud: 'Cloud' }[settings?.transcription_mode] || 'Cloud'),
       enabled: false
     },
     {
@@ -717,6 +718,7 @@ function openDashboard() {
       hotkey: settings?.hotkey || 'CommandOrControl+Shift+Space',
       mode: settings?.transcription_mode || 'cloud',
       localModelReady: localWhisper.isModelDownloaded(),
+      whisperCppReady: isWhisperCppAvailable(),
       isLoggedIn: !!store.get('user_id')
     })});
   `);
@@ -1046,16 +1048,14 @@ function getDashboardHTML() {
             <span class="label">Mode</span>
             <div style="display:flex;align-items:center;gap:10px;">
               <span class="value" id="settingsMode" style="min-width:80px">Cloud</span>
-              <button class="btn btn-ghost" id="modeToggleBtn" onclick="toggleMode()" style="padding:5px 12px;font-size:12px;">Switch to Local</button>
+              <button class="btn btn-ghost" id="modeToggleBtn" onclick="cycleMode()" style="padding:5px 12px;font-size:12px;">Switch to Groq (Fast)</button>
             </div>
           </div>
           <div class="card-row">
-            <span class="label">Local Whisper Model</span>
-            <span class="value" id="localModelStatus">Not downloaded</span>
+            <span class="label">Local Engine Status</span>
+            <span class="value" id="localModelStatus">Not installed</span>
           </div>
-          <div id="modeHint" style="font-size:11px;color:var(--text3);padding:8px 0 0;line-height:1.5;display:none;">
-            Local mode processes audio on-device (HIPAA-safe). Requires ~150 MB model download from the tray menu.
-          </div>
+          <div id="modeHint" style="font-size:11px;color:var(--text3);padding:8px 0 0;line-height:1.5;display:none;"></div>
         </div>
         <div class="card">
           <h3>Interface</h3>
@@ -1119,19 +1119,33 @@ function getDashboardHTML() {
       if (window.dashboard) window.dashboard.togglePill(toggle.classList.contains('on'));
     }
 
-    function toggleMode() {
-      const modeEl = document.getElementById('settingsMode');
-      const activeEl = document.getElementById('activeMode');
-      const btn = document.getElementById('modeToggleBtn');
-      const hint = document.getElementById('modeHint');
-      const isCloud = modeEl.textContent === 'Cloud';
-      const newMode = isCloud ? 'local' : 'cloud';
-      const newLabel = isCloud ? 'Local (HIPAA)' : 'Cloud';
-      modeEl.textContent = newLabel;
-      if (activeEl) activeEl.textContent = newLabel;
-      btn.textContent = isCloud ? 'Switch to Cloud' : 'Switch to Local';
-      hint.style.display = isCloud ? 'block' : 'none';
-      if (window.dashboard) window.dashboard.setMode(newMode);
+    var __currentMode = 'cloud';
+    var __modeOrder = ['cloud', 'groq', 'local'];
+    var __modeLabels = { cloud: 'Cloud (OpenAI)', groq: 'Groq (Fast)', local: 'Local (HIPAA)' };
+
+    function cycleMode() {
+      var idx = __modeOrder.indexOf(__currentMode);
+      __currentMode = __modeOrder[(idx + 1) % __modeOrder.length];
+      updateModeUI(__currentMode);
+      if (window.dashboard) window.dashboard.setMode(__currentMode);
+    }
+
+    function updateModeUI(mode) {
+      __currentMode = mode;
+      var label = __modeLabels[mode] || 'Cloud (OpenAI)';
+      var modeEl = document.getElementById('settingsMode');
+      var activeEl = document.getElementById('activeMode');
+      var btn = document.getElementById('modeToggleBtn');
+      var hint = document.getElementById('modeHint');
+      if (modeEl) modeEl.textContent = label;
+      if (activeEl) activeEl.textContent = label;
+      var nextIdx = (__modeOrder.indexOf(mode) + 1) % __modeOrder.length;
+      if (btn) btn.textContent = 'Switch to ' + __modeLabels[__modeOrder[nextIdx]];
+      if (hint) {
+        if (mode === 'local') { hint.textContent = 'Local mode processes audio on-device via whisper.cpp (HIPAA-safe). Install: brew install whisper-cpp, then download a model.'; hint.style.display = 'block'; }
+        else if (mode === 'groq') { hint.textContent = 'Groq uses custom LPU hardware for ultra-fast Whisper transcription (<500ms). Requires a free Groq API key from console.groq.com.'; hint.style.display = 'block'; }
+        else { hint.textContent = ''; hint.style.display = 'none'; }
+      }
     }
 
     function openLinkBoard() {
@@ -1157,20 +1171,22 @@ function getDashboardHTML() {
       });
 
       // Mode
-      const modeName = data.mode === 'local' ? 'Local (HIPAA)' : 'Cloud';
-      const modeEl = document.getElementById('activeMode');
-      const settingsModeEl = document.getElementById('settingsMode');
-      const modeBtnEl = document.getElementById('modeToggleBtn');
-      const modeHintEl = document.getElementById('modeHint');
-      if (modeEl) modeEl.textContent = modeName;
-      if (settingsModeEl) settingsModeEl.textContent = modeName;
-      if (modeBtnEl) modeBtnEl.textContent = data.mode === 'local' ? 'Switch to Cloud' : 'Switch to Local';
-      if (modeHintEl) modeHintEl.style.display = data.mode === 'local' ? 'block' : 'none';
+      updateModeUI(data.mode || 'cloud');
 
-      // Local model
+      // Local model / whisper.cpp status
       const localEl = document.getElementById('localModelStatus');
-      if (localEl) localEl.textContent = data.localModelReady ? 'Ready' : 'Not downloaded';
-      if (localEl && data.localModelReady) localEl.style.color = 'var(--teal-light)';
+      if (localEl) {
+        if (data.whisperCppReady) {
+          localEl.textContent = 'whisper.cpp ready (native Metal)';
+          localEl.style.color = 'var(--teal-light)';
+        } else if (data.localModelReady) {
+          localEl.textContent = 'ONNX model ready (slower)';
+          localEl.style.color = 'var(--gold)';
+        } else {
+          localEl.textContent = 'Not installed';
+          localEl.style.color = 'var(--text3)';
+        }
+      }
 
       // Language
       const langEl = document.getElementById('settingsLang');
@@ -1491,7 +1507,7 @@ async function onHotkeyUp() {
     const mode = settings?.transcription_mode || store.get('transcription_mode') || 'cloud';
     const apiKey = settings?.openai_api_key || store.get('openai_api_key');
 
-    if (mode !== 'local' && !apiKey) {
+    if (mode !== 'local' && mode !== 'groq' && !apiKey) {
       hideIndicator();
       updateTrayMenu('No API key');
       console.error('No OpenAI API key configured');
@@ -1500,10 +1516,13 @@ async function onHotkeyUp() {
 
     if (mode === 'local') {
       showIndicator('Local transcription...', { processing: true });
+    } else if (mode === 'groq') {
+      showIndicator('Groq transcription...', { processing: true });
     }
 
     const authToken = store.get('supabase_token');
-    const text = await transcribe(apiKey, audioBuffer, settings?.language || 'en', authToken, mode);
+    const groqKey = settings?.groq_api_key || store.get('groq_api_key') || '';
+    const text = await transcribe(apiKey, audioBuffer, settings?.language || 'en', authToken, mode, { groq_api_key: groqKey });
 
     if (text && text.trim()) {
       let finalText = text.trim();
