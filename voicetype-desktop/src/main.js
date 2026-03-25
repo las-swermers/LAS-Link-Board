@@ -251,15 +251,15 @@ function formatHotkey(key) {
 
 function createIndicatorWindow() {
   indicatorWindow = new BrowserWindow({
-    width: 260,
-    height: 280,
+    width: 220,
+    height: 54,
     show: false,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    hasShadow: true,
+    hasShadow: false,
     focusable: true,
     webPreferences: {
       nodeIntegration: false,
@@ -280,10 +280,11 @@ function createIndicatorWindow() {
         display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
         height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         background: transparent; user-select: none;
+        overflow: hidden;
       }
       .container {
-        display: flex; flex-direction: column; align-items: center; gap: 6px;
-        padding-bottom: 8px; position: relative;
+        display: flex; flex-direction: column; align-items: center; gap: 4px;
+        position: relative;
       }
 
       /* ── Skill Dropdown (appears above pill) ── */
@@ -377,10 +378,10 @@ function createIndicatorWindow() {
 
       /* ── Close Button ── */
       .close-btn {
-        position: absolute; top: -6px; right: -6px;
-        width: 20px; height: 20px; border-radius: 50%;
+        position: absolute; top: 2px; right: 2px;
+        width: 16px; height: 16px; border-radius: 50%;
         background: rgba(255,255,255,0.15); border: none;
-        color: rgba(255,255,255,0.6); font-size: 12px; line-height: 20px;
+        color: rgba(255,255,255,0.6); font-size: 10px; line-height: 16px;
         text-align: center; cursor: pointer;
         opacity: 0; transition: opacity 0.2s, background 0.15s;
         -webkit-app-region: no-drag; z-index: 10;
@@ -389,10 +390,12 @@ function createIndicatorWindow() {
       .container:hover .close-btn { opacity: 1; }
       .close-btn:hover { background: rgba(231,76,60,0.8); color: #fff; }
 
-      /* ── Tooltip ── */
+      /* ── Tooltip (hidden by default, only shown briefly) ── */
       .tooltip {
         font-size: 10px; color: rgba(255,255,255,0.5);
         text-align: center; transition: opacity 0.2s;
+        position: absolute; bottom: -14px; white-space: nowrap;
+        pointer-events: none; display: none;
       }
     </style></head>
     <body>
@@ -461,11 +464,19 @@ function createIndicatorWindow() {
           if (isRecordingState) return; // don't open menu while recording
           menuOpen = !menuOpen;
           document.getElementById('skillMenu').classList.toggle('open', menuOpen);
+          // Expand window to fit dropdown, or shrink back
+          if (menuOpen) {
+            var menuH = Math.min(skills.length * 36 + 16, 200);
+            if (window.voicetype) window.voicetype.resizePill(220, 54 + menuH + 4);
+          } else {
+            if (window.voicetype) window.voicetype.resizePill(220, 54);
+          }
         }
 
         function closeSkillMenu() {
           menuOpen = false;
           document.getElementById('skillMenu').classList.remove('open');
+          if (window.voicetype) window.voicetype.resizePill(220, 54);
         }
 
         function updateSkillTag() {
@@ -638,10 +649,10 @@ function createIndicatorWindow() {
   fs.writeFileSync(indicatorTmpPath, indicatorHTML);
   indicatorWindow.loadFile(indicatorTmpPath);
 
-  // Position at bottom-center of primary display
+  // Position at bottom-center of primary display (tight to the pill)
   const display = screen.getPrimaryDisplay();
-  const x = Math.round(display.bounds.x + display.bounds.width / 2 - 130);
-  const y = display.bounds.y + display.bounds.height - 100;
+  const x = Math.round(display.bounds.x + display.bounds.width / 2 - 110);
+  const y = display.bounds.y + display.bounds.height - 80;
   indicatorWindow.setPosition(x, y);
 }
 
@@ -1353,6 +1364,16 @@ function getDashboardHTML() {
 ipcMain.on('skill-select', (_event, idx) => {
   selectedSkillIdx = idx;
   pillSkillOverride = true; // user explicitly chose a skill on the pill
+});
+
+// IPC: Resize indicator window (expand for dropdown, shrink for pill-only)
+ipcMain.on('indicator-resize', (_event, width, height) => {
+  if (!indicatorWindow) return;
+  const [curX, curY] = indicatorWindow.getPosition();
+  const [curW, curH] = indicatorWindow.getSize();
+  // Anchor bottom — grow upward
+  const newY = curY + curH - height;
+  indicatorWindow.setBounds({ x: curX, y: newY, width, height });
 });
 
 // IPC: Hide floating pill (close button on indicator)
