@@ -1357,6 +1357,96 @@ body {
 @media (max-width: 500px) {
   .vn-stats { grid-template-columns: 1fr; }
 }
+
+/* ─── Date Carousel ─── */
+.vn-cal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;
+}
+.vn-cal-title { font-family: 'Montserrat', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--navy); }
+.vn-cal-nav { display: flex; gap: 0.35rem; align-items: center; }
+.vn-cal-nav-btn {
+  width: 32px; height: 32px; border: 1.5px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+  transition: all 0.15s;
+}
+.vn-cal-nav-btn:hover { border-color: var(--gold); color: var(--gold); }
+.vn-cal-today-btn {
+  padding: 0.35rem 0.75rem; border: 1.5px solid var(--border); border-radius: 8px;
+  background: var(--surface); font-size: 0.72rem; font-weight: 600;
+  color: var(--text-muted); cursor: pointer; font-family: 'Inter', sans-serif;
+}
+.vn-cal-today-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+.vn-date-square {
+  min-width: 72px; padding: 0.5rem 0.6rem; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  text-align: center; cursor: pointer; flex-shrink: 0;
+  transition: all 0.2s; scroll-snap-align: start;
+  user-select: none; position: relative;
+}
+.vn-date-square:hover { border-color: var(--gold); }
+.vn-date-square.today { border-color: var(--gold); background: var(--gold-light); }
+.vn-date-square.selected { background: var(--navy); border-color: var(--navy); }
+.vn-date-square.selected .vn-ds-day,
+.vn-date-square.selected .vn-ds-date,
+.vn-date-square.selected .vn-ds-month { color: #fff; }
+.vn-date-square.drag-over { border-color: var(--teal); background: var(--teal-light); transform: scale(1.05); }
+.vn-ds-day { font-family: 'Montserrat', sans-serif; font-size: 0.62rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.vn-ds-date { font-family: 'Montserrat', sans-serif; font-size: 1.35rem; font-weight: 800; color: var(--navy); line-height: 1.2; }
+.vn-ds-month { font-size: 0.6rem; color: var(--text-muted); font-weight: 600; }
+.vn-ds-dots { display: flex; gap: 3px; justify-content: center; margin-top: 4px; }
+.vn-ds-dot { width: 5px; height: 5px; border-radius: 50%; }
+.vn-date-square.selected .vn-ds-dot { opacity: 0.7; }
+
+/* View Toggle */
+.vn-view-toggle { display: flex; gap: 2px; background: var(--surface-alt); border-radius: 8px; padding: 2px; width: fit-content; }
+.vn-view-btn {
+  padding: 0.35rem 0.85rem; border: none; border-radius: 6px;
+  font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 700;
+  background: none; color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+}
+.vn-view-btn.active { background: var(--surface); color: var(--navy); box-shadow: var(--shadow); }
+
+/* Month Grid */
+.vn-cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;
+  background: var(--border); border: 1.5px solid var(--border); border-radius: 12px;
+  overflow: hidden;
+}
+.vn-cal-day-header {
+  padding: 0.5rem; text-align: center;
+  font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+  background: var(--surface-alt);
+}
+.vn-cal-day {
+  min-height: 90px; padding: 0.35rem; background: var(--surface);
+  cursor: pointer; transition: background 0.15s;
+}
+.vn-cal-day:hover { background: var(--gold-light); }
+.vn-cal-day.other-month { background: var(--surface-alt); opacity: 0.4; }
+.vn-cal-day.today { background: rgba(197,150,59,0.08); }
+.vn-cal-day.today .vn-cal-date { color: var(--gold); font-weight: 800; }
+.vn-cal-day.selected { box-shadow: inset 0 0 0 2px var(--gold); }
+.vn-cal-day.drag-over { background: var(--teal-light); }
+.vn-cal-date {
+  font-family: 'Montserrat', sans-serif; font-size: 0.75rem; font-weight: 600;
+  color: var(--text); margin-bottom: 0.2rem;
+}
+.vn-cal-items { display: flex; flex-direction: column; gap: 2px; }
+.vn-cal-item {
+  font-size: 0.62rem; padding: 2px 5px; border-radius: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-weight: 500; border-left: 2px solid transparent;
+}
+.vn-cal-item.completed { opacity: 0.4; text-decoration: line-through; }
+.vn-cal-more { font-size: 0.6rem; color: var(--text-muted); padding: 1px 5px; font-weight: 600; }
+
+@media (max-width: 768px) {
+  .vn-cal-day { min-height: 60px; }
+}
 </style>
 </head>
 <body>
@@ -2040,8 +2130,14 @@ body {
             <button class="vn-cat-pill add-cat" onclick="openCategoryEditor()">+ Category</button>
           </div>
 
-          <!-- Filter / Sort Controls -->
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <!-- Date Carousel -->
+          <div class="vn-cal-header">
+            <div class="vn-cal-nav">
+              <button class="vn-cal-nav-btn" onclick="shiftVnCarousel(-7)" title="Previous week">&#8249;</button>
+              <button class="vn-cal-today-btn" onclick="jumpVnCarouselToday()">Today</button>
+              <button class="vn-cal-nav-btn" onclick="shiftVnCarousel(7)" title="Next week">&#8250;</button>
+            </div>
+            <div class="vn-cal-title" id="vnCalTitle">This Week</div>
             <div style="display:flex;gap:0.5rem;align-items:center">
               <select id="vnStatusFilter" onchange="renderVnTodos()" style="padding:0.35rem 0.65rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;background:var(--surface)">
                 <option value="active">Active</option>
@@ -2054,9 +2150,27 @@ body {
                 <span class="aura-dot"></span>
                 <span id="vnOrahStatus">Orah: Not connected</span>
               </div>
-            </div>
-            <div style="display:flex;gap:0.5rem">
               <button class="btn btn-outline btn-sm" onclick="openOrahSettings()" style="font-size:0.72rem">Orah Settings</button>
+            </div>
+          </div>
+
+          <!-- View Toggle -->
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem">
+            <div class="vn-view-toggle">
+              <button class="vn-view-btn active" id="vnViewCarousel" onclick="setVnView('carousel')">Week</button>
+              <button class="vn-view-btn" id="vnViewMonth" onclick="setVnView('month')">Month</button>
+            </div>
+          </div>
+
+          <!-- Scrollable Date Strip (carousel view) -->
+          <div id="vnDateCarousel" style="display:flex;gap:0.5rem;overflow-x:auto;padding:0.25rem 0 0.75rem;margin-bottom:1rem;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin">
+            <!-- Populated by JS: date squares -->
+          </div>
+
+          <!-- Month Grid (hidden by default) -->
+          <div id="vnMonthGrid" style="display:none;margin-bottom:1rem">
+            <div id="vnMonthGridInner" class="vn-cal-grid">
+              <!-- Populated by JS -->
             </div>
           </div>
 
@@ -2166,6 +2280,9 @@ body {
                 Send Request
               </button>
               <button class="btn btn-outline" onclick="saveTransportDraft()" style="font-size:0.78rem">Save Draft</button>
+              <button class="btn btn-outline" onclick="addCurrentFormToCalendar()" style="font-size:0.78rem" title="Add to Google Calendar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </button>
             </div>
             <div class="vn-form-hint" style="text-align:center;margin-top:0.5rem" id="trSubmitHint">
               Will send to your configured transport email or Google Sheet
@@ -5576,6 +5693,8 @@ async function loadVoiceNotes() {
 
   updateVnStats();
   renderVnCategories();
+  if (!vnCarouselStart) initVnCarousel();
+  else renderVnCarousel();
   renderVnTodos();
   updateVnOrahBadge();
   loadTransportHistory();
@@ -5788,6 +5907,13 @@ function renderVnTodos() {
   if (vnActiveCategory) {
     filtered = filtered.filter(n => n.category_id === vnActiveCategory);
   }
+  // Filter by selected date in carousel
+  if (vnSelectedDate) {
+    filtered = filtered.filter(n => {
+      const noteDate = n.due_date ? toDateStr(new Date(n.due_date)) : toDateStr(new Date(n.created_at));
+      return noteDate === vnSelectedDate;
+    });
+  }
   if (statusFilter === 'active') {
     filtered = filtered.filter(n => n.status !== 'completed' && n.status !== 'archived');
   } else if (statusFilter !== 'all') {
@@ -5805,7 +5931,7 @@ function renderVnTodos() {
     const cat = vnCategories.find(c => c.id === n.category_id);
     const isComplete = n.status === 'completed';
     const prioClass = (n.priority === 'high' || n.priority === 'urgent') ? ' priority-' + n.priority : '';
-    return `<div class="vn-todo-item${isComplete ? ' completed' : ''}${prioClass}" data-id="${n.id}">
+    return `<div class="vn-todo-item${isComplete ? ' completed' : ''}${prioClass}" data-id="${n.id}" draggable="true" ondragstart="startDragNote(event,'${n.id}')">
       <div class="vn-todo-check${isComplete ? ' checked' : ''}" onclick="toggleVnComplete('${n.id}')"></div>
       <div class="vn-todo-body" onclick="openVnNote('${n.id}')">
         <div class="vn-todo-title">${esc(n.title || n.transcript.substring(0, 60))}</div>
@@ -5898,6 +6024,220 @@ async function deleteVnNote(noteId) {
   updateVnStats();
   renderVnTodos();
   toast('Note deleted', true);
+}
+
+// ─── Date Carousel ───
+let vnCarouselStart = null; // first date shown in carousel
+let vnSelectedDate = null;  // currently selected date string (YYYY-MM-DD)
+const VN_CAROUSEL_DAYS = 14; // show 14 days at a time
+
+function initVnCarousel() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  // Start 2 days before today so today is visible near the left
+  vnCarouselStart = new Date(today);
+  vnCarouselStart.setDate(vnCarouselStart.getDate() - 2);
+  vnSelectedDate = toDateStr(today);
+  renderVnCarousel();
+}
+
+function toDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function shiftVnCarousel(days) {
+  if (vnCurrentView === 'month') {
+    // Shift by month
+    const sel = vnSelectedDate ? new Date(vnSelectedDate + 'T00:00:00') : new Date();
+    sel.setMonth(sel.getMonth() + (days > 0 ? 1 : -1));
+    vnSelectedDate = toDateStr(sel);
+    renderVnMonthGrid();
+    renderVnTodos();
+    return;
+  }
+  vnCarouselStart.setDate(vnCarouselStart.getDate() + days);
+  renderVnCarousel();
+}
+
+function jumpVnCarouselToday() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  vnCarouselStart = new Date(today);
+  vnCarouselStart.setDate(vnCarouselStart.getDate() - 2);
+  vnSelectedDate = toDateStr(today);
+  renderVnCarousel();
+  renderVnTodos();
+}
+
+function renderVnCarousel() {
+  const el = document.getElementById('vnDateCarousel');
+  const todayStr = toDateStr(new Date());
+  let html = '';
+
+  for (let i = 0; i < VN_CAROUSEL_DAYS; i++) {
+    const d = new Date(vnCarouselStart);
+    d.setDate(d.getDate() + i);
+    const ds = toDateStr(d);
+    const dayName = d.toLocaleDateString('en', { weekday: 'short' });
+    const monthName = d.toLocaleDateString('en', { month: 'short' });
+    const isToday = ds === todayStr;
+    const isSelected = ds === vnSelectedDate;
+
+    // Count notes for this date (by due_date or created_at)
+    const dayNotes = vnNotes.filter(n => {
+      const noteDate = n.due_date ? toDateStr(new Date(n.due_date)) : toDateStr(new Date(n.created_at));
+      return noteDate === ds;
+    });
+    const cats = {};
+    dayNotes.forEach(n => {
+      const cat = vnCategories.find(c => c.id === n.category_id);
+      const color = cat ? cat.color : '#ccc';
+      cats[color] = (cats[color] || 0) + 1;
+    });
+
+    html += `<div class="vn-date-square${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}"
+      data-date="${ds}" onclick="selectVnDate('${ds}')"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="dropNoteOnDate(event,'${ds}');this.classList.remove('drag-over')">
+      <div class="vn-ds-day">${dayName}</div>
+      <div class="vn-ds-date">${d.getDate()}</div>
+      <div class="vn-ds-month">${monthName}</div>
+      ${Object.keys(cats).length > 0 ? '<div class="vn-ds-dots">' + Object.entries(cats).slice(0, 4).map(([color, count]) => '<span class="vn-ds-dot" style="background:' + color + '" title="' + count + ' note(s)"></span>').join('') + '</div>' : ''}
+    </div>`;
+  }
+
+  el.innerHTML = html;
+
+  // Update title
+  const endDate = new Date(vnCarouselStart);
+  endDate.setDate(endDate.getDate() + VN_CAROUSEL_DAYS - 1);
+  const title = vnCarouselStart.toLocaleDateString('en', { month: 'short', day: 'numeric' }) + ' — ' + endDate.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('vnCalTitle').textContent = title;
+
+  // Scroll selected date into view
+  setTimeout(() => {
+    const sel = el.querySelector('.vn-date-square.selected');
+    if (sel) sel.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, 50);
+}
+
+function selectVnDate(dateStr) {
+  vnSelectedDate = dateStr;
+  if (vnCurrentView === 'month') renderVnMonthGrid();
+  else renderVnCarousel();
+  renderVnTodos();
+}
+
+// ─── Drag and Drop Notes onto Dates ───
+let vnDragNoteId = null;
+
+function startDragNote(event, noteId) {
+  vnDragNoteId = noteId;
+  event.dataTransfer.setData('text/plain', noteId);
+  event.dataTransfer.effectAllowed = 'move';
+}
+
+async function dropNoteOnDate(event, dateStr) {
+  event.preventDefault();
+  const noteId = event.dataTransfer.getData('text/plain') || vnDragNoteId;
+  if (!noteId) return;
+  vnDragNoteId = null;
+
+  const note = vnNotes.find(n => n.id === noteId);
+  if (!note) return;
+
+  // Update the due_date to the dropped date
+  const newDue = dateStr + 'T09:00:00';
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  await fetch(SUPABASE_URL + '/rest/v1/voice_notes?id=eq.' + noteId, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ due_date: newDue, updated_at: new Date().toISOString() })
+  });
+
+  note.due_date = newDue;
+  renderVnCarousel();
+  renderVnTodos();
+  toast('Note moved to ' + new Date(newDue).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' }), true);
+}
+
+// ─── View Toggle & Month Grid ───
+let vnCurrentView = 'carousel';
+
+function setVnView(view) {
+  vnCurrentView = view;
+  document.getElementById('vnViewCarousel').classList.toggle('active', view === 'carousel');
+  document.getElementById('vnViewMonth').classList.toggle('active', view === 'month');
+  document.getElementById('vnDateCarousel').style.display = view === 'carousel' ? 'flex' : 'none';
+  document.getElementById('vnMonthGrid').style.display = view === 'month' ? 'block' : 'none';
+  if (view === 'month') renderVnMonthGrid();
+}
+
+function renderVnMonthGrid() {
+  const sel = vnSelectedDate ? new Date(vnSelectedDate + 'T00:00:00') : new Date();
+  const year = sel.getFullYear();
+  const month = sel.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startWeekday = firstDay.getDay() || 7; // Mon=1
+  const todayStr = toDateStr(new Date());
+
+  // Update header title to show month
+  const monthName = sel.toLocaleDateString('en', { month: 'long', year: 'numeric' });
+  document.getElementById('vnCalTitle').textContent = monthName;
+
+  let html = '';
+  // Day headers
+  ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(d => {
+    html += '<div class="vn-cal-day-header">' + d + '</div>';
+  });
+
+  // Pad start
+  const padStart = (startWeekday === 0 ? 6 : startWeekday - 1);
+  for (let i = 0; i < padStart; i++) {
+    const d = new Date(year, month, -(padStart - i - 1));
+    html += buildMonthDayCell(d, todayStr, true);
+  }
+  // Days of month
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const date = new Date(year, month, d);
+    html += buildMonthDayCell(date, todayStr, false);
+  }
+  // Pad end
+  const totalCells = padStart + lastDay.getDate();
+  const remaining = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(year, month + 1, i);
+    html += buildMonthDayCell(d, todayStr, true);
+  }
+
+  document.getElementById('vnMonthGridInner').innerHTML = html;
+}
+
+function buildMonthDayCell(date, todayStr, isOther) {
+  const ds = toDateStr(date);
+  const isToday = ds === todayStr;
+  const isSelected = ds === vnSelectedDate;
+  const dayNotes = vnNotes.filter(n => {
+    const nd = n.due_date ? toDateStr(new Date(n.due_date)) : toDateStr(new Date(n.created_at));
+    return nd === ds;
+  });
+  const MAX_SHOW = 2;
+
+  let itemsHtml = dayNotes.slice(0, MAX_SHOW).map(n => {
+    const cat = vnCategories.find(c => c.id === n.category_id);
+    const color = cat ? cat.color : '#999';
+    const completed = n.status === 'completed' ? ' completed' : '';
+    return '<div class="vn-cal-item' + completed + '" style="background:' + color + '15;color:' + color + ';border-left-color:' + color + '">' + esc(n.title || n.transcript.substring(0, 20)) + '</div>';
+  }).join('');
+  if (dayNotes.length > MAX_SHOW) {
+    itemsHtml += '<div class="vn-cal-more">+' + (dayNotes.length - MAX_SHOW) + ' more</div>';
+  }
+
+  return '<div class="vn-cal-day' + (isOther ? ' other-month' : '') + (isToday ? ' today' : '') + (isSelected ? ' selected' : '') + '" data-date="' + ds + '" onclick="selectVnDate(\'' + ds + '\')" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="dropNoteOnDate(event,\'' + ds + '\');this.classList.remove(\'drag-over\')">' +
+    '<div class="vn-cal-date">' + date.getDate() + '</div>' +
+    '<div class="vn-cal-items">' + itemsHtml + '</div></div>';
 }
 
 // ─── Category Management ───
@@ -6254,6 +6594,8 @@ async function submitOrSaveTransport(status) {
     if (status === 'submitted') {
       // Generate PDF and send
       await sendTransportRequest(record);
+      // Create Google Calendar event
+      addTransportToGoogleCalendar(record);
       toast('Transport request submitted!', true);
     } else {
       toast('Draft saved', true);
@@ -6440,6 +6782,60 @@ function viewTransportRequest(trId) {
   document.getElementById('trReturnTime').value = tr.return_time ? tr.return_time.slice(0, 16) : '';
   document.getElementById('trSpecialInstructions').value = tr.special_instructions || '';
   document.getElementById('trVoiceNoteId').value = tr.voice_note_id || '';
+}
+
+// ─── Google Calendar Integration ───
+function addTransportToGoogleCalendar(tr) {
+  if (!tr.date_time) return; // no date set, skip
+
+  const start = new Date(tr.date_time);
+  const end = tr.return_time ? new Date(tr.return_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000); // default 2hr
+
+  // Format dates for Google Calendar URL (YYYYMMDDTHHmmss)
+  const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const dates = fmt(start) + '/' + fmt(end);
+
+  const title = encodeURIComponent('Transport: ' + tr.student_name + ' — ' + (tr.appointment_type || 'Appointment'));
+  const location = encodeURIComponent(tr.destination || '');
+  const details = encodeURIComponent(
+    'Student: ' + tr.student_name +
+    (tr.student_house ? '\nHouse: ' + tr.student_house : '') +
+    (tr.student_year ? '\nYear: ' + tr.student_year : '') +
+    '\n\nAppointment: ' + (tr.appointment_type || 'Other') +
+    '\nPickup: ' + (tr.pickup_location || 'School Reception') +
+    '\nDestination: ' + (tr.destination || 'TBD') +
+    (tr.appointment_details ? '\n\nDetails: ' + tr.appointment_details : '') +
+    (tr.special_instructions ? '\n\nSpecial Instructions: ' + tr.special_instructions : '') +
+    '\n\n— Generated via LAS LinkBoard Voice Notes'
+  );
+
+  const calUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE' +
+    '&text=' + title +
+    '&dates=' + dates +
+    '&details=' + details +
+    '&location=' + location +
+    '&sf=true&output=xml';
+
+  // Open in new tab — user can confirm and save to their calendar
+  window.open(calUrl, '_blank');
+}
+
+function addCurrentFormToCalendar() {
+  const tr = {
+    student_name: document.getElementById('trStudentName').value.trim(),
+    student_house: document.getElementById('trStudentHouse').value.trim(),
+    student_year: document.getElementById('trStudentYear').value.trim(),
+    appointment_type: document.getElementById('trAppointmentType').value,
+    destination: document.getElementById('trDestination').value.trim(),
+    pickup_location: document.getElementById('trPickupLocation').value.trim(),
+    date_time: document.getElementById('trDateTime').value,
+    return_time: document.getElementById('trReturnTime').value,
+    appointment_details: document.getElementById('trAppointmentDetails').value.trim(),
+    special_instructions: document.getElementById('trSpecialInstructions').value.trim()
+  };
+  if (!tr.student_name) { toast('Enter a student name first'); return; }
+  if (!tr.date_time) { toast('Set a date/time first'); return; }
+  addTransportToGoogleCalendar(tr);
 }
 
 // Register service worker for PWA
