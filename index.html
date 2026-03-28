@@ -2125,6 +2125,23 @@ body {
             </div>
           </div>
 
+          <!-- Quick-Add Note -->
+          <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:stretch">
+            <div style="flex:1;position:relative">
+              <input type="text" id="vnQuickNote" placeholder="Type a note... (use @name to tag a student, #category to categorize)"
+                style="width:100%;padding:0.7rem 1rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.88rem;background:var(--surface);transition:border-color 0.2s"
+                onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"
+                onkeydown="if(event.key==='Enter')addQuickNote()">
+            </div>
+            <select id="vnQuickCategory" style="padding:0.5rem 0.75rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.78rem;background:var(--surface);min-width:110px">
+              <option value="">Category...</option>
+              <!-- Populated by JS -->
+            </select>
+            <button class="btn btn-gold" onclick="addQuickNote()" style="border-radius:10px;padding:0.5rem 1.25rem;white-space:nowrap">
+              + Add
+            </button>
+          </div>
+
           <!-- Category Filter Bar -->
           <div class="vn-category-bar" id="vnCategoryBar">
             <button class="vn-cat-pill active" onclick="filterVnCategory(null)" data-cat="all">All<span class="vn-cat-count" id="vnCatCountAll"></span></button>
@@ -5786,10 +5803,100 @@ function updateVnOrahBadge() {
 }
 
 function populateVnCategorySelectors() {
+  const catOptions = vnCategories.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('');
   const sel = document.getElementById('vnNoteEditCategory');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Uncategorized</option>' +
-    vnCategories.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('');
+  if (sel) sel.innerHTML = '<option value="">Uncategorized</option>' + catOptions + '<option value="__new__">+ New Category...</option>';
+  const quick = document.getElementById('vnQuickCategory');
+  if (quick) quick.innerHTML = '<option value="">Category...</option>' + catOptions + '<option value="__new__">+ New Category...</option>';
+
+  // Listen for "+ New Category" selection
+  [sel, quick].forEach(s => {
+    if (!s) return;
+    s.removeEventListener('change', onCategorySelectorChange);
+    s.addEventListener('change', onCategorySelectorChange);
+  });
+}
+
+function onCategorySelectorChange(e) {
+  if (e.target.value === '__new__') {
+    e.target.value = ''; // reset to avoid "__new__" being submitted
+    openCategoryEditor();
+  }
+}
+
+// ─── Quick-Add Note ───
+async function addQuickNote() {
+  const input = document.getElementById('vnQuickNote');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+  // Parse hashtag categories: #medical, #admin, etc.
+  let categoryId = document.getElementById('vnQuickCategory').value || null;
+  let cleanText = text;
+  const hashMatch = text.match(/#(\w+)/);
+  if (hashMatch && !categoryId) {
+    const catName = hashMatch[1].toLowerCase();
+    const cat = vnCategories.find(c => c.name.toLowerCase() === catName);
+    if (cat) categoryId = cat.id;
+    cleanText = text.replace(/#\w+/g, '').trim();
+  }
+
+  // Parse @student mentions
+  let taggedStudent = '';
+  let taggedStudentId = '';
+  const atMatch = text.match(/@([\w\s]+?)(?=\s*[#,.\n]|$)/);
+  if (atMatch) {
+    const studentQuery = atMatch[1].trim();
+    cleanText = cleanText.replace(/@[\w\s]+/, '').trim();
+    // Match against cached Orah students
+    const match = vnOrahStudents.find(s => {
+      const name = (s.name || (s.first_name + ' ' + s.last_name) || '').toLowerCase();
+      return name.includes(studentQuery.toLowerCase());
+    });
+    if (match) {
+      taggedStudent = match.name || (match.first_name + ' ' + match.last_name);
+      taggedStudentId = match.id || '';
+    } else {
+      taggedStudent = studentQuery;
+    }
+  }
+
+  const title = cleanText.split(/[.!?\n]/)[0].substring(0, 80);
+
+  const note = {
+    user_id: currentUser.id,
+    transcript: cleanText,
+    title: title,
+    category_id: categoryId,
+    tagged_student: taggedStudent,
+    tagged_student_id: taggedStudentId,
+    priority: 'normal',
+    status: 'pending'
+  };
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/voice_notes', {
+    method: 'POST', headers, body: JSON.stringify(note)
+  });
+
+  if (res.ok) {
+    const created = await res.json();
+    const newNote = created[0] || created;
+    vnNotes.unshift(newNote);
+    updateVnStats();
+    renderVnTodos();
+    renderVnCategories();
+    if (vnCurrentView === 'month') renderVnMonthGrid();
+    else renderVnCarousel();
+    sendVoiceNoteToChat(newNote);
+    input.value = '';
+    document.getElementById('vnQuickCategory').value = '';
+    toast('Note added', true);
+  } else {
+    toast('Failed to add note');
+  }
 }
 
 // ─── Voice Notes Recording ───

@@ -275,8 +275,8 @@ function formatHotkey(key) {
 
 function createIndicatorWindow() {
   indicatorWindow = new BrowserWindow({
-    width: 220,
-    height: 62,
+    width: 240,
+    height: 80,
     show: false,
     frame: false,
     transparent: true,
@@ -439,8 +439,8 @@ function createIndicatorWindow() {
       .tooltip {
         font-size: 10px; color: rgba(11,37,69,0.5);
         text-align: center; transition: opacity 0.2s;
-        position: absolute; bottom: -14px; white-space: nowrap;
-        pointer-events: none; display: none;
+        position: absolute; bottom: -16px; white-space: nowrap;
+        pointer-events: none;
       }
     </style></head>
     <body>
@@ -609,7 +609,7 @@ function createIndicatorWindow() {
           isRecordingState = (state === 'recording');
 
           if (state === 'idle') {
-            tooltip.textContent = 'Click mic to record';
+            tooltip.textContent = vnModeActive ? 'Voice Notes mode' : 'Click mic to record';
             tooltip.style.opacity = '1';
           } else if (state === 'recording') {
             tooltip.textContent = 'Click to stop';
@@ -618,9 +618,18 @@ function createIndicatorWindow() {
             tooltip.textContent = '';
             tooltip.style.opacity = '0';
           } else if (state === 'done') {
-            tooltip.textContent = 'Pasted to clipboard';
+            tooltip.textContent = vnModeActive ? 'Saved to notebook' : 'Pasted to clipboard';
             tooltip.style.opacity = '1';
           }
+
+          // Auto-resize pill window based on state
+          // idle = compact, recording/processing/done = expanded to fit label + tooltip
+          setTimeout(() => {
+            const container = document.getElementById('container');
+            const h = container.offsetHeight + 16;
+            const w = Math.max(220, container.offsetWidth + 16);
+            if (window.voicetype) window.voicetype.resizePill(w, h);
+          }, 50);
         }
 
         // ── Browser-based audio recording (fallback when SoX not installed) ──
