@@ -1216,6 +1216,79 @@ body {
 .vn-todo-act-btn:hover { background: var(--navy); color: #fff; }
 .vn-todo-act-btn.danger:hover { background: var(--danger); color: #fff; }
 
+/* ─── Category Card Grid ─── */
+.vn-category-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem; align-items: start;
+}
+.vn-cat-column {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 12px; overflow: hidden; box-shadow: var(--shadow);
+}
+.vn-cat-column-header {
+  padding: 0.65rem 1rem; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1.5px solid var(--border); cursor: pointer;
+}
+.vn-cat-column-header:hover { background: var(--surface-alt); }
+.vn-cat-column-title {
+  font-family: 'Montserrat', sans-serif; font-size: 0.78rem; font-weight: 700;
+  display: flex; align-items: center; gap: 6px;
+}
+.vn-cat-column-count {
+  font-size: 0.65rem; font-weight: 600; color: var(--text-muted);
+  background: var(--surface-alt); padding: 1px 7px; border-radius: 10px;
+}
+.vn-cat-column-body { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.vn-cat-column-body:empty::after {
+  content: 'No notes'; display: block; text-align: center;
+  font-size: 0.75rem; color: var(--text-muted); padding: 1rem 0; opacity: 0.5;
+}
+
+/* Compact note card (inside category column) */
+.vn-note-card {
+  padding: 0.5rem 0.65rem; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface);
+  transition: all 0.15s; position: relative;
+}
+.vn-note-card:hover { border-color: var(--gold); box-shadow: 0 1px 4px rgba(197,150,59,0.1); }
+.vn-note-card.completed { opacity: 0.45; }
+.vn-note-card.completed .vn-nc-title { text-decoration: line-through; }
+.vn-note-card.priority-high { border-left: 3px solid var(--orange); }
+.vn-note-card.priority-urgent { border-left: 3px solid var(--crimson); }
+
+.vn-nc-top { display: flex; align-items: center; gap: 0.5rem; }
+.vn-nc-check {
+  width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border);
+  flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; font-size: 0.55rem; color: transparent;
+}
+.vn-nc-check:hover { border-color: var(--gold); }
+.vn-nc-check.checked { background: var(--gold); border-color: var(--gold); color: #fff; }
+.vn-nc-title {
+  font-size: 0.78rem; font-weight: 600; color: var(--text);
+  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vn-nc-time { font-size: 0.62rem; color: var(--text-muted); flex-shrink: 0; }
+.vn-nc-actions {
+  position: absolute; top: 4px; right: 4px; display: none; gap: 2px;
+}
+.vn-note-card:hover .vn-nc-actions { display: flex; }
+.vn-nc-act {
+  width: 22px; height: 22px; border: none; border-radius: 4px;
+  background: var(--surface-alt); color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 0.68rem;
+}
+.vn-nc-act:hover { background: var(--navy); color: #fff; }
+.vn-nc-act.danger:hover { background: var(--danger); color: #fff; }
+
+/* Expanded card details */
+.vn-nc-details {
+  display: none; padding-top: 0.4rem; margin-top: 0.4rem;
+  border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;
+}
+.vn-note-card.expanded .vn-nc-details { display: block; }
+.vn-nc-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.35rem; }
+
 .vn-empty {
   text-align: center; padding: 3rem 1rem; color: var(--text-muted);
 }
@@ -2089,129 +2162,79 @@ body {
       <div class="vn-layout">
         <div class="vn-main" id="vnMain">
 
-          <!-- Stats Row -->
-          <div class="vn-stats">
-            <div class="vn-stat-card">
-              <div class="vn-stat-label">Total Notes</div>
-              <div class="vn-stat-val" id="vnStatTotal">0</div>
-            </div>
-            <div class="vn-stat-card">
-              <div class="vn-stat-label">Pending</div>
-              <div class="vn-stat-val" id="vnStatPending">0</div>
-            </div>
-            <div class="vn-stat-card">
-              <div class="vn-stat-label">Completed</div>
-              <div class="vn-stat-val" id="vnStatCompleted">0</div>
-            </div>
-            <div class="vn-stat-card">
-              <div class="vn-stat-label">Transport Requests</div>
-              <div class="vn-stat-val" id="vnStatTransport">0</div>
-            </div>
-          </div>
-
-          <!-- Voice Recorder Bar -->
-          <div class="vn-recorder" id="vnRecorder">
-            <button class="vn-rec-btn" id="vnRecordBtn" onclick="toggleVnRecording()">
-              <svg id="vnMicIcon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-              <svg id="vnStopIcon" style="display:none" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-            </button>
-            <div class="vn-rec-info">
-              <div class="vn-rec-title" id="vnRecTitle">Record a voice note</div>
-              <div class="vn-rec-sub" id="vnRecSub">Tap to start — your voice will be transcribed and added as a to-do item</div>
-            </div>
-            <div class="vn-rec-timer" id="vnRecTimer">0:00</div>
-            <div class="vn-rec-wave" id="vnRecWave">
-              <span></span><span></span><span></span><span></span><span></span>
-            </div>
-          </div>
-
-          <!-- Quick-Add Note -->
-          <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:stretch">
-            <div style="flex:1;position:relative">
-              <input type="text" id="vnQuickNote" placeholder="Type a note... (use @name to tag a student, #category to categorize)"
-                style="width:100%;padding:0.7rem 1rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.88rem;background:var(--surface);transition:border-color 0.2s"
+          <!-- Top Bar: Quick-Add + Stats + Orah -->
+          <div style="display:flex;gap:0.75rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap">
+            <!-- Quick-Add Input -->
+            <div style="flex:1;min-width:250px;display:flex;gap:0.5rem;align-items:stretch">
+              <input type="text" id="vnQuickNote" placeholder="Add a note... (@student, #category)"
+                style="flex:1;padding:0.6rem 1rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.85rem;background:var(--surface);transition:border-color 0.2s"
                 onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"
                 onkeydown="if(event.key==='Enter')addQuickNote()">
-            </div>
-            <select id="vnQuickCategory" style="padding:0.5rem 0.75rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.78rem;background:var(--surface);min-width:110px">
-              <option value="">Category...</option>
-              <!-- Populated by JS -->
-            </select>
-            <button class="btn btn-gold" onclick="addQuickNote()" style="border-radius:10px;padding:0.5rem 1.25rem;white-space:nowrap">
-              + Add
-            </button>
-          </div>
-
-          <!-- Category Filter Bar -->
-          <div class="vn-category-bar" id="vnCategoryBar">
-            <button class="vn-cat-pill active" onclick="filterVnCategory(null)" data-cat="all">All<span class="vn-cat-count" id="vnCatCountAll"></span></button>
-            <!-- Categories populated by JS -->
-            <button class="vn-cat-pill add-cat" onclick="openCategoryEditor()">+ Category</button>
-          </div>
-
-          <!-- Date Carousel -->
-          <div class="vn-cal-header">
-            <div class="vn-cal-nav">
-              <button class="vn-cal-nav-btn" onclick="shiftVnCarousel(-7)" title="Previous week">&#8249;</button>
-              <button class="vn-cal-today-btn" onclick="jumpVnCarouselToday()">Today</button>
-              <button class="vn-cal-nav-btn" onclick="shiftVnCarousel(7)" title="Next week">&#8250;</button>
-            </div>
-            <div class="vn-cal-title" id="vnCalTitle">This Week</div>
-            <div style="display:flex;gap:0.5rem;align-items:center">
-              <select id="vnStatusFilter" onchange="renderVnTodos()" style="padding:0.35rem 0.65rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.78rem;background:var(--surface)">
-                <option value="active">Active</option>
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-                <option value="archived">Archived</option>
+              <select id="vnQuickCategory" style="padding:0.4rem 0.6rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.75rem;background:var(--surface);min-width:90px">
+                <option value="">Category</option>
               </select>
-              <div class="vn-aura-badge" id="vnAuraBadge">
+              <button class="btn btn-gold" onclick="addQuickNote()" style="border-radius:10px;padding:0.4rem 1rem;font-size:0.78rem;white-space:nowrap">+ Add</button>
+            </div>
+            <!-- Compact Stats -->
+            <div style="display:flex;gap:0.75rem;align-items:center;font-size:0.75rem;color:var(--text-muted);flex-shrink:0">
+              <span><strong id="vnStatTotal" style="color:var(--navy)">0</strong> notes</span>
+              <span><strong id="vnStatPending" style="color:var(--orange)">0</strong> pending</span>
+              <span><strong id="vnStatCompleted" style="color:#2E7D32">0</strong> done</span>
+              <span><strong id="vnStatTransport" style="color:var(--crimson)">0</strong> transport</span>
+            </div>
+            <!-- Orah + Settings (stacked right) -->
+            <div style="display:flex;gap:0.35rem;align-items:center;flex-shrink:0">
+              <div class="vn-aura-badge" id="vnAuraBadge" style="font-size:0.65rem">
                 <span class="aura-dot"></span>
-                <span id="vnOrahStatus">Orah: Not connected</span>
+                <span id="vnOrahStatus">Orah</span>
               </div>
-              <button class="btn btn-outline btn-sm" onclick="openOrahSettings()" style="font-size:0.72rem">Orah Settings</button>
+              <button class="btn btn-outline btn-sm" onclick="openOrahSettings()" style="font-size:0.68rem;padding:0.3rem 0.6rem">Settings</button>
             </div>
           </div>
 
-          <!-- View Toggle -->
-          <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem">
+          <!-- Date Navigation Row -->
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;flex-wrap:wrap">
+            <!-- Left: Week/Month toggle + nav -->
             <div class="vn-view-toggle">
               <button class="vn-view-btn active" id="vnViewCarousel" onclick="setVnView('carousel')">Week</button>
               <button class="vn-view-btn" id="vnViewMonth" onclick="setVnView('month')">Month</button>
             </div>
+            <div class="vn-cal-nav">
+              <button class="vn-cal-nav-btn" onclick="shiftVnCarousel(-7)" title="Previous">&#8249;</button>
+              <button class="vn-cal-today-btn" onclick="jumpVnCarouselToday()">Today</button>
+              <button class="vn-cal-nav-btn" onclick="shiftVnCarousel(7)" title="Next">&#8250;</button>
+            </div>
+            <div class="vn-cal-title" id="vnCalTitle" style="flex:1">This Week</div>
+            <!-- Right: Filters -->
+            <select id="vnStatusFilter" onchange="renderVnTodos()" style="padding:0.3rem 0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.72rem;background:var(--surface)">
+              <option value="active">Active</option>
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+            </select>
+            <!-- Category Filter -->
+            <div class="vn-category-bar" id="vnCategoryBar" style="margin-bottom:0">
+              <button class="vn-cat-pill active" onclick="filterVnCategory(null)" data-cat="all">All</button>
+            </div>
           </div>
 
-          <!-- Scrollable Date Strip (carousel view) -->
-          <div id="vnDateCarousel" style="display:flex;gap:0.5rem;overflow-x:auto;padding:0.25rem 0 0.75rem;margin-bottom:1rem;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin">
-            <!-- Populated by JS: date squares -->
+          <!-- Date Strip (carousel view) -->
+          <div id="vnDateCarousel" style="display:flex;gap:0.5rem;overflow-x:auto;padding:0.25rem 0 0.5rem;margin-bottom:0.75rem;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin">
           </div>
 
           <!-- Month Grid (hidden by default) -->
-          <div id="vnMonthGrid" style="display:none;margin-bottom:1rem">
-            <div id="vnMonthGridInner" class="vn-cal-grid">
-              <!-- Populated by JS -->
-            </div>
+          <div id="vnMonthGrid" style="display:none;margin-bottom:0.75rem">
+            <div id="vnMonthGridInner" class="vn-cal-grid"></div>
           </div>
 
-          <!-- Desktop App Tip -->
-          <div id="vnDesktopTip" style="background:linear-gradient(135deg,#FFFDF5,var(--surface));border:1.5px solid rgba(197,150,59,0.3);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;box-shadow:var(--shadow)">
-            <div style="font-size:1.5rem;flex-shrink:0">&#128187;</div>
-            <div style="flex:1">
-              <div style="font-family:Montserrat,sans-serif;font-size:0.82rem;font-weight:700;color:var(--navy);margin-bottom:0.15rem">Use the Desktop App for Free Local Transcription</div>
-              <div style="font-size:0.75rem;color:var(--text-muted)">The VoiceType desktop app includes local Whisper transcription — no API key needed. Enable "Voice Notes mode" in the app to save directly here.</div>
-            </div>
-            <button class="btn btn-gold btn-sm" onclick="switchTab('voicetype');setTimeout(()=>switchVtTab('download'),100)" style="white-space:nowrap">Download App</button>
-            <button onclick="document.getElementById('vnDesktopTip').style.display='none'" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:4px">&times;</button>
-          </div>
-
-          <!-- To-Do List -->
-          <div class="vn-todo-list" id="vnTodoList">
-            <!-- Populated by JS -->
+          <!-- Notes by Category (card grid) -->
+          <div id="vnTodoList" class="vn-category-grid">
+            <!-- Populated by JS: one column per category -->
           </div>
           <div class="vn-empty" id="vnEmpty" style="display:none">
-            <div class="vn-empty-icon">&#127908;</div>
-            <h3>No voice notes yet</h3>
-            <p>Hit the record button above and speak your note. It'll be transcribed and added here automatically.</p>
+            <div class="vn-empty-icon">&#128221;</div>
+            <h3>No notes yet</h3>
+            <p>Type a note above, send one via Google Chat, or use the desktop app to record one.</p>
           </div>
 
         </div>
@@ -6102,29 +6125,61 @@ function renderVnTodos() {
   }
   empty.style.display = 'none';
 
-  list.innerHTML = filtered.map(n => {
-    const cat = vnCategories.find(c => c.id === n.category_id);
-    const isComplete = n.status === 'completed';
-    const prioClass = (n.priority === 'high' || n.priority === 'urgent') ? ' priority-' + n.priority : '';
-    return `<div class="vn-todo-item${isComplete ? ' completed' : ''}${prioClass}" data-id="${n.id}" draggable="true" ondragstart="startDragNote(event,'${n.id}')">
-      <div class="vn-todo-check${isComplete ? ' checked' : ''}" onclick="toggleVnComplete('${n.id}')"></div>
-      <div class="vn-todo-body" onclick="openVnNote('${n.id}')">
-        <div class="vn-todo-title">${esc(n.title || n.transcript.substring(0, 60))}</div>
-        <div class="vn-todo-transcript">${esc(n.transcript)}</div>
-        <div class="vn-todo-meta">
-          ${cat ? '<span class="vn-todo-tag" style="background:' + cat.color + '15;color:' + cat.color + '"><span class="cat-dot" style="background:' + cat.color + '"></span>' + esc(cat.name) + '</span>' : ''}
-          ${n.tagged_student ? '<span class="vn-todo-tag student">' + esc(n.tagged_student) + '</span>' : ''}
-          ${n.transport_request_id ? '<span class="vn-todo-tag transport" onclick="event.stopPropagation();openTransportFromNote(\'' + n.transport_request_id + '\')">Transport</span>' : ''}
-          <span class="vn-todo-tag time">${timeAgo(n.created_at)}</span>
-          ${n.duration_seconds ? '<span class="vn-todo-tag time">' + Math.ceil(n.duration_seconds / 60) + 'min</span>' : ''}
+  // Group notes by category
+  const groups = {};
+  // Add uncategorized group
+  groups['__uncategorized__'] = { name: 'Uncategorized', color: '#6B7C8D', notes: [] };
+  vnCategories.forEach(c => { groups[c.id] = { name: c.name, color: c.color, notes: [] }; });
+  filtered.forEach(n => {
+    const key = n.category_id && groups[n.category_id] ? n.category_id : '__uncategorized__';
+    groups[key].notes.push(n);
+  });
+
+  // If filtering by category, only show that one expanded
+  const activeGroups = vnActiveCategory
+    ? Object.entries(groups).filter(([k]) => k === vnActiveCategory)
+    : Object.entries(groups).filter(([, g]) => g.notes.length > 0);
+
+  list.innerHTML = activeGroups.map(([catId, group]) => {
+    const notesHtml = group.notes.map(n => {
+      const isComplete = n.status === 'completed';
+      const prioClass = (n.priority === 'high' || n.priority === 'urgent') ? ' priority-' + n.priority : '';
+      return `<div class="vn-note-card${isComplete ? ' completed' : ''}${prioClass}" data-id="${n.id}" draggable="true" ondragstart="startDragNote(event,'${n.id}')" onclick="toggleNoteExpand(this)">
+        <div class="vn-nc-actions">
+          <button class="vn-nc-act" onclick="event.stopPropagation();openVnNote('${n.id}')" title="Edit">&#9998;</button>
+          <button class="vn-nc-act danger" onclick="event.stopPropagation();deleteVnNote('${n.id}')" title="Delete">&times;</button>
         </div>
+        <div class="vn-nc-top">
+          <div class="vn-nc-check${isComplete ? ' checked' : ''}" onclick="event.stopPropagation();toggleVnComplete('${n.id}')">&#10003;</div>
+          <div class="vn-nc-title">${esc(n.title || n.transcript.substring(0, 50))}</div>
+          <div class="vn-nc-time">${timeAgo(n.created_at)}</div>
+        </div>
+        <div class="vn-nc-details">
+          <div>${esc(n.transcript)}</div>
+          <div class="vn-nc-tags">
+            ${n.tagged_student ? '<span class="vn-todo-tag student">' + esc(n.tagged_student) + '</span>' : ''}
+            ${n.transport_request_id ? '<span class="vn-todo-tag transport" onclick="event.stopPropagation();openTransportFromNote(\'' + n.transport_request_id + '\')">Transport</span>' : ''}
+            ${n.due_date ? '<span class="vn-todo-tag time">Due: ' + new Date(n.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '</span>' : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="vn-cat-column">
+      <div class="vn-cat-column-header" onclick="filterVnCategory('${catId === '__uncategorized__' ? '' : catId}')">
+        <div class="vn-cat-column-title">
+          <span class="cat-dot" style="background:${group.color}"></span>
+          ${esc(group.name)}
+        </div>
+        <span class="vn-cat-column-count">${group.notes.length}</span>
       </div>
-      <div class="vn-todo-actions">
-        <button class="vn-todo-act-btn" onclick="event.stopPropagation();openVnNote('${n.id}')" title="Edit">&#9998;</button>
-        <button class="vn-todo-act-btn danger" onclick="event.stopPropagation();deleteVnNote('${n.id}')" title="Delete">&#10005;</button>
-      </div>
+      <div class="vn-cat-column-body">${notesHtml}</div>
     </div>`;
   }).join('');
+}
+
+function toggleNoteExpand(el) {
+  el.classList.toggle('expanded');
 }
 
 async function toggleVnComplete(noteId) {
