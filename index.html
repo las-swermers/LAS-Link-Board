@@ -7102,30 +7102,44 @@ async function sendTransportRequest(tr) {
   doc.text('Request ID: ' + tr.id, 15, 288);
 
   const pdfBlob = doc.output('blob');
+  const pdfFilename = 'transport-request-' + tr.student_name.replace(/\s/g, '-') + '.pdf';
+  const transportEmail = vnOrahSettings?.transport_email || '';
 
-  // Send via API endpoint (email or Google Sheets)
-  try {
-    const formData = new FormData();
-    formData.append('pdf', pdfBlob, 'transport-request-' + tr.student_name.replace(/\s/g, '-') + '.pdf');
-    formData.append('transport_request', JSON.stringify(tr));
-    formData.append('transport_email', vnOrahSettings?.transport_email || '');
-    formData.append('google_sheets_id', vnOrahSettings?.google_sheets_id || '');
+  // Always download the PDF so they can print/attach it
+  doc.save(pdfFilename);
 
-    const res = await fetch('/api/voicenotes/send-transport', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + (currentSession?.access_token || SUPABASE_ANON) },
-      body: formData
-    });
+  // Open mailto with transport details pre-filled
+  if (transportEmail) {
+    const type = (tr.appointment_type || 'Other').charAt(0).toUpperCase() + (tr.appointment_type || 'other').slice(1);
+    const dateStr = tr.date_time
+      ? new Date(tr.date_time).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : 'TBD';
+    const returnStr = tr.return_time
+      ? new Date(tr.return_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      : 'TBD';
 
-    if (!res.ok) {
-      // Fallback: download PDF locally
-      doc.save('transport-request-' + tr.student_name.replace(/\s/g, '-') + '.pdf');
-      toast('Email send failed — PDF downloaded instead');
-    }
-  } catch (e) {
-    // Fallback: download PDF
-    doc.save('transport-request-' + tr.student_name.replace(/\s/g, '-') + '.pdf');
-    toast('PDF downloaded (email not configured)');
+    const subject = encodeURIComponent('Transport Request: ' + tr.student_name + ' — ' + type);
+    const body = encodeURIComponent(
+      'Transport Request\n' +
+      '─────────────────\n\n' +
+      'Student: ' + tr.student_name + '\n' +
+      (tr.student_house ? 'House: ' + tr.student_house + '\n' : '') +
+      (tr.student_year ? 'Year: ' + tr.student_year + '\n' : '') +
+      '\nAppointment: ' + type + '\n' +
+      'Destination: ' + (tr.destination || 'N/A') + '\n' +
+      'Pickup: ' + (tr.pickup_location || 'School Reception') + '\n' +
+      'Date & Time: ' + dateStr + '\n' +
+      'Estimated Return: ' + returnStr + '\n' +
+      (tr.appointment_details ? '\nDetails: ' + tr.appointment_details + '\n' : '') +
+      (tr.special_instructions ? '\nSpecial Instructions: ' + tr.special_instructions + '\n' : '') +
+      '\n─────────────────\n' +
+      'PDF attached. Generated via LAS LinkBoard.'
+    );
+
+    window.open('mailto:' + transportEmail + '?subject=' + subject + '&body=' + body, '_self');
+    toast('PDF downloaded — email opened. Attach the PDF and send!', true);
+  } else {
+    toast('PDF downloaded — no transport email configured', true);
   }
 }
 
