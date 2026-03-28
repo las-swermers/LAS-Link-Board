@@ -2219,11 +2219,15 @@ body {
               <option value="pending">Pending</option>
               <option value="completed">Completed</option>
             </select>
-            <!-- Category Filter -->
-            <div class="vn-category-bar" id="vnCategoryBar" style="margin-bottom:0">
-              <button class="vn-cat-pill active" onclick="filterVnCategory(null)" data-cat="all">All</button>
-            </div>
+            <!-- Category Filter Dropdown -->
+            <select id="vnCategoryFilter" onchange="filterVnCategory(this.value || null)" style="padding:0.3rem 0.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.72rem;background:var(--surface)">
+              <option value="">All Categories</option>
+              <!-- Populated by JS -->
+            </select>
+            <button class="btn btn-outline" onclick="openCategoryEditor()" style="padding:0.25rem 0.5rem;font-size:0.68rem;border-radius:8px">+ Category</button>
           </div>
+          <!-- Hidden bar for backwards compat with renderVnCategories -->
+          <div id="vnCategoryBar" style="display:none"></div>
 
           <!-- Date Strip (carousel view) -->
           <div id="vnDateCarousel" style="display:flex;gap:0.5rem;overflow-x:auto;padding:0.25rem 0 0.75rem;margin-bottom:0.75rem;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin;cursor:grab">
@@ -6651,17 +6655,15 @@ function buildMonthDayCell(date, todayStr, isOther) {
 
 // ─── Category Management ───
 function renderVnCategories() {
-  const bar = document.getElementById('vnCategoryBar');
-  const allCount = vnNotes.length;
-  let html = `<button class="vn-cat-pill${!vnActiveCategory ? ' active' : ''}" onclick="filterVnCategory(null)" data-cat="all">All<span class="vn-cat-count">${allCount}</span></button>`;
-  vnCategories.forEach(c => {
-    const count = vnNotes.filter(n => n.category_id === c.id).length;
-    html += `<button class="vn-cat-pill${vnActiveCategory === c.id ? ' active' : ''}" onclick="filterVnCategory('${c.id}')" data-cat="${c.id}">
-      <span class="cat-dot" style="background:${c.color}"></span>${esc(c.name)}<span class="vn-cat-count">${count}</span>
-    </button>`;
-  });
-  html += '<button class="vn-cat-pill add-cat" onclick="openCategoryEditor()">+ Category</button>';
-  bar.innerHTML = html;
+  // Populate the category filter dropdown
+  const dropdown = document.getElementById('vnCategoryFilter');
+  if (dropdown) {
+    dropdown.innerHTML = '<option value="">All Categories</option>' +
+      vnCategories.map(c => {
+        const count = vnNotes.filter(n => n.category_id === c.id).length;
+        return '<option value="' + c.id + '"' + (vnActiveCategory === c.id ? ' selected' : '') + '>' + esc(c.name) + ' (' + count + ')</option>';
+      }).join('');
+  }
 }
 
 function filterVnCategory(catId) {
