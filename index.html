@@ -2086,21 +2086,21 @@ body {
 
           <div class="vt-card">
             <h4>Google Calendar</h4>
-            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Transport requests will be added to this calendar. Leave blank for your default calendar.</p>
-            <div class="vt-field">
-              <label>Auto-Add Script URL</label>
-              <input type="text" id="vtCalendarScriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
-              <div class="vt-hint">Deploy the Apps Script from <code>scripts/auto-calendar-events.gs</code> as a web app, then paste the URL here. Events auto-add to all configured calendars.</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Connect your Google Calendar to auto-add transport events.</p>
+            <div id="vtGcalStatus" style="margin-bottom:0.75rem">
+              <span class="vn-aura-badge" id="vtGcalBadge">
+                <span class="aura-dot"></span>
+                <span id="vtGcalStatusText">Not connected</span>
+              </span>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem">
+              <button class="btn btn-gold btn-sm" onclick="connectGoogleCalendar()" id="vtGcalConnectBtn">Connect Google Calendar</button>
+              <button class="btn btn-danger-ghost btn-sm" onclick="disconnectGoogleCalendar()" id="vtGcalDisconnectBtn" style="display:none">Disconnect</button>
             </div>
             <div class="vt-field">
-              <label>Script Secret</label>
-              <input type="text" id="vtCalendarSecret" placeholder="Your secret token from the Apps Script CONFIG">
-              <div class="vt-hint">Must match the SECRET in your Apps Script CONFIG.</div>
-            </div>
-            <div class="vt-field">
-              <label>Fallback Calendar ID <span style="color:var(--text-muted);font-weight:400">(if no script configured)</span></label>
-              <input type="text" id="vtGoogleCalendarId" placeholder="e.g. transport@group.calendar.google.com">
-              <div class="vt-hint">Used for the manual Google Calendar link. Leave blank for primary calendar.</div>
+              <label>Calendar IDs <span style="color:var(--text-muted);font-weight:400">(one per line, first is default)</span></label>
+              <textarea id="vtGoogleCalendarIds" rows="3" placeholder="primary&#10;transport@group.calendar.google.com&#10;nurse@group.calendar.google.com" style="font-size:0.82rem;font-family:monospace"></textarea>
+              <div class="vt-hint">Events will be added to all listed calendars. Use "primary" for your main calendar.</div>
             </div>
           </div>
 
@@ -6950,9 +6950,9 @@ function loadIntegrationSettings() {
     document.getElementById('vtChatOnNote').checked = vnOrahSettings.chat_on_note !== false;
     document.getElementById('vtChatOnTransport').checked = vnOrahSettings.chat_on_transport !== false;
     document.getElementById('vtGoogleSheetsId').value = vnOrahSettings.google_sheets_id || '';
-    document.getElementById('vtGoogleCalendarId').value = vnOrahSettings.google_calendar_id || '';
-    document.getElementById('vtCalendarScriptUrl').value = vnOrahSettings.calendar_script_url || '';
-    document.getElementById('vtCalendarSecret').value = vnOrahSettings.calendar_secret || '';
+    document.getElementById('vtGoogleCalendarIds').value = vnOrahSettings.google_calendar_id || 'primary';
+    // Update calendar connection status
+    updateGcalStatus();
   }
 }
 
@@ -6970,9 +6970,7 @@ async function saveIntegrationSettings() {
     chat_on_note: document.getElementById('vtChatOnNote').checked,
     chat_on_transport: document.getElementById('vtChatOnTransport').checked,
     google_sheets_id: document.getElementById('vtGoogleSheetsId').value.trim(),
-    google_calendar_id: document.getElementById('vtGoogleCalendarId').value.trim(),
-    calendar_script_url: document.getElementById('vtCalendarScriptUrl').value.trim(),
-    calendar_secret: document.getElementById('vtCalendarSecret').value.trim(),
+    google_calendar_id: document.getElementById('vtGoogleCalendarIds').value.trim(),
     updated_at: new Date().toISOString()
   };
 
@@ -7015,6 +7013,60 @@ async function testOrahConnectionFromSettings() {
     if (res.ok) toast('Orah connection successful!', true);
     else toast('Orah connection failed: ' + await res.text());
   } catch (e) { toast('Orah error: ' + e.message); }
+}
+
+// ─── Google Calendar OAuth ───
+function connectGoogleCalendar() {
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  window.open('/api/voicenotes/google-auth?supabase_token=' + encodeURIComponent(token), '_blank');
+  // Poll for connection status
+  toast('Authorizing Google Calendar...');
+  let checks = 0;
+  const poll = setInterval(async () => {
+    checks++;
+    if (checks > 30) { clearInterval(poll); return; } // stop after 60s
+    await loadVoiceNotes();
+    if (vnOrahSettings && vnOrahSettings.google_refresh_token) {
+      clearInterval(poll);
+      updateGcalStatus();
+      toast('Google Calendar connected!', true);
+    }
+  }, 2000);
+}
+
+async function disconnectGoogleCalendar() {
+  if (!confirm('Disconnect Google Calendar? Transport events will no longer auto-add.')) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  if (vnOrahSettings && vnOrahSettings.id) {
+    await fetch(SUPABASE_URL + '/rest/v1/orah_settings?id=eq.' + vnOrahSettings.id, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ google_access_token: '', google_refresh_token: '', google_token_expiry: null })
+    });
+    vnOrahSettings.google_refresh_token = '';
+    vnOrahSettings.google_access_token = '';
+  }
+  updateGcalStatus();
+  toast('Google Calendar disconnected', true);
+}
+
+function updateGcalStatus() {
+  const badge = document.getElementById('vtGcalBadge');
+  const text = document.getElementById('vtGcalStatusText');
+  const connectBtn = document.getElementById('vtGcalConnectBtn');
+  const disconnectBtn = document.getElementById('vtGcalDisconnectBtn');
+  const connected = vnOrahSettings && vnOrahSettings.google_refresh_token;
+  if (connected) {
+    badge.classList.add('connected');
+    text.textContent = 'Connected';
+    connectBtn.textContent = 'Reconnect';
+    disconnectBtn.style.display = '';
+  } else {
+    badge.classList.remove('connected');
+    text.textContent = 'Not connected';
+    connectBtn.textContent = 'Connect Google Calendar';
+    disconnectBtn.style.display = 'none';
+  }
 }
 
 async function clearAllSettings() {
@@ -7613,52 +7665,45 @@ async function deleteTransportRequest(trId) {
 async function addTransportToGoogleCalendar(tr) {
   if (!tr.date_time) return;
 
-  // Try auto-add via Apps Script first
-  const scriptUrl = vnOrahSettings?.calendar_script_url;
-  const secret = vnOrahSettings?.calendar_secret;
-  if (scriptUrl) {
+  // Try auto-add via OAuth Calendar API
+  if (vnOrahSettings && vnOrahSettings.google_refresh_token) {
     try {
-      const res = await fetch(scriptUrl, {
+      const calIds = (vnOrahSettings.google_calendar_id || 'primary').split('\n').map(s => s.trim()).filter(Boolean);
+      const res = await fetch('/api/voicenotes/create-calendar-event', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: secret || '', transport_request: tr }),
-        mode: 'no-cors' // Apps Script doesn't support CORS
+        headers: {
+          'Authorization': 'Bearer ' + (currentSession?.access_token || SUPABASE_ANON),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ transport_request: tr, calendar_ids: calIds })
       });
-      // no-cors means we can't read the response, but the event gets created
-      toast('Calendar event auto-added!', true);
-      return;
+      if (res.ok) {
+        const data = await res.json();
+        const created = data.results?.filter(r => r.status === 'created').length || 0;
+        toast('Added to ' + created + ' calendar(s)', true);
+        return;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.warn('Calendar API failed:', err.error);
+        toast('Calendar: ' + (err.error || 'failed, opening manually'));
+      }
     } catch (e) {
-      console.warn('Apps Script calendar failed, falling back to URL:', e);
+      console.warn('Calendar API error:', e);
     }
   }
 
-  // Fallback: open Google Calendar URL for manual confirmation
+  // Fallback: open Google Calendar URL
   const start = new Date(tr.date_time);
-  const end = tr.return_time ? new Date(tr.return_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  const end = tr.return_time ? new Date(tr.return_time) : new Date(start.getTime() + 2 * 3600000);
   const pad = (n) => String(n).padStart(2, '0');
   const fmt = (d) => d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
-  const dates = fmt(start) + '/' + fmt(end);
-
-  const title = encodeURIComponent('Transport: ' + tr.student_name + ' — ' + (tr.appointment_type || 'Appointment'));
-  const location = encodeURIComponent(tr.destination || '');
-  const details = encodeURIComponent(
-    'Student: ' + tr.student_name +
-    (tr.student_house ? '\nHouse: ' + tr.student_house : '') +
-    (tr.student_year ? '\nYear: ' + tr.student_year : '') +
-    '\n\nAppointment: ' + (tr.appointment_type || 'Other') +
-    '\nPickup: ' + (tr.pickup_location || 'School Reception') +
-    '\nDestination: ' + (tr.destination || 'TBD') +
-    (tr.appointment_details ? '\n\nDetails: ' + tr.appointment_details : '') +
-    (tr.special_instructions ? '\n\nSpecial Instructions: ' + tr.special_instructions : '') +
-    '\n\n— Generated via LAS LinkBoard'
-  );
-
-  const calId = vnOrahSettings?.google_calendar_id || '';
-  const calParam = calId ? '&src=' + encodeURIComponent(calId) : '';
 
   const calUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE' +
-    '&text=' + title + '&dates=' + dates + '&details=' + details +
-    '&location=' + location + calParam + '&sf=true&output=xml';
+    '&text=' + encodeURIComponent('Transport: ' + tr.student_name + ' — ' + (tr.appointment_type || 'Appointment')) +
+    '&dates=' + fmt(start) + '/' + fmt(end) +
+    '&details=' + encodeURIComponent('Student: ' + tr.student_name + '\nDestination: ' + (tr.destination || 'TBD')) +
+    '&location=' + encodeURIComponent(tr.destination || '') +
+    '&sf=true&output=xml';
   window.open(calUrl, '_blank');
 }
 
