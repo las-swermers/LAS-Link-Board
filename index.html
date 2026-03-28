@@ -1216,59 +1216,75 @@ body {
 .vn-todo-act-btn:hover { background: var(--navy); color: #fff; }
 .vn-todo-act-btn.danger:hover { background: var(--danger); color: #fff; }
 
-/* ─── Category Card Grid ─── */
+/* ─── Kanban Board ─── */
 .vn-category-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem; align-items: start;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem; align-items: start;
 }
 .vn-cat-column {
-  background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: 12px; overflow: hidden; box-shadow: var(--shadow);
+  background: var(--surface-alt); border-radius: 12px;
+  min-height: 120px; transition: background 0.2s;
 }
+.vn-cat-column.drag-over { background: rgba(197,150,59,0.08); }
 .vn-cat-column-header {
-  padding: 0.65rem 1rem; display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1.5px solid var(--border); cursor: pointer;
+  padding: 0.75rem 0.85rem 0.5rem; display: flex; align-items: center; justify-content: space-between;
 }
-.vn-cat-column-header:hover { background: var(--surface-alt); }
 .vn-cat-column-title {
-  font-family: 'Montserrat', sans-serif; font-size: 0.78rem; font-weight: 700;
+  font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);
   display: flex; align-items: center; gap: 6px;
 }
 .vn-cat-column-count {
-  font-size: 0.65rem; font-weight: 600; color: var(--text-muted);
-  background: var(--surface-alt); padding: 1px 7px; border-radius: 10px;
+  font-size: 0.62rem; font-weight: 700; color: var(--text-muted);
+  background: var(--surface); padding: 1px 6px; border-radius: 8px;
+  min-width: 18px; text-align: center;
 }
-.vn-cat-column-body { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.vn-cat-column-body {
+  padding: 0 0.5rem 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;
+  min-height: 40px;
+}
 .vn-cat-column-body:empty::after {
-  content: 'No notes'; display: block; text-align: center;
-  font-size: 0.75rem; color: var(--text-muted); padding: 1rem 0; opacity: 0.5;
+  content: 'Drop notes here'; display: block; text-align: center;
+  font-size: 0.72rem; color: var(--text-muted); padding: 1.5rem 0; opacity: 0.35;
+  border: 1.5px dashed var(--border); border-radius: 8px; margin-top: 0.25rem;
 }
 
-/* Compact note card (inside category column) */
+/* Note card */
 .vn-note-card {
-  padding: 0.5rem 0.65rem; border-radius: 8px; cursor: pointer;
-  border: 1px solid var(--border); background: var(--surface);
+  padding: 0.65rem 0.75rem; border-radius: 8px; cursor: grab;
+  background: var(--surface); box-shadow: 0 1px 3px rgba(11,37,69,0.06);
   transition: all 0.15s; position: relative;
+  border: 1px solid transparent;
 }
-.vn-note-card:hover { border-color: var(--gold); box-shadow: 0 1px 4px rgba(197,150,59,0.1); }
-.vn-note-card.completed { opacity: 0.45; }
-.vn-note-card.completed .vn-nc-title { text-decoration: line-through; }
+.vn-note-card:hover { box-shadow: 0 2px 8px rgba(11,37,69,0.1); border-color: var(--gold); }
+.vn-note-card:active { cursor: grabbing; opacity: 0.8; }
+.vn-note-card.completed { opacity: 0.4; }
+.vn-note-card.completed .vn-nc-title { text-decoration: line-through; color: var(--text-muted); }
 .vn-note-card.priority-high { border-left: 3px solid var(--orange); }
 .vn-note-card.priority-urgent { border-left: 3px solid var(--crimson); }
+.vn-note-card.dragging { opacity: 0.4; transform: rotate(2deg); }
 
-.vn-nc-top { display: flex; align-items: center; gap: 0.5rem; }
+.vn-nc-top { display: flex; align-items: flex-start; gap: 0.5rem; }
 .vn-nc-check {
-  width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border);
+  width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #ccc;
   flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s; font-size: 0.55rem; color: transparent;
+  transition: all 0.15s; font-size: 0.6rem; color: transparent; margin-top: 1px;
 }
 .vn-nc-check:hover { border-color: var(--gold); }
 .vn-nc-check.checked { background: var(--gold); border-color: var(--gold); color: #fff; }
+.vn-nc-body { flex: 1; min-width: 0; }
 .vn-nc-title {
-  font-size: 0.78rem; font-weight: 600; color: var(--text);
-  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 0.82rem; font-weight: 500; color: var(--text);
+  line-height: 1.3; margin-bottom: 0.2rem;
 }
-.vn-nc-time { font-size: 0.62rem; color: var(--text-muted); flex-shrink: 0; }
+.vn-nc-due {
+  font-size: 0.68rem; color: var(--text-muted);
+}
+.vn-nc-due.overdue { color: var(--crimson); font-weight: 600; }
+.vn-nc-student {
+  font-size: 0.65rem; color: var(--gold-hover); font-weight: 600;
+  margin-top: 0.15rem;
+}
 .vn-nc-actions {
   position: absolute; top: 4px; right: 4px; display: none; gap: 2px;
 }
@@ -5821,12 +5837,40 @@ async function loadVoiceNotes() {
 
   updateVnStats();
   renderVnCategories();
+  // Roll over past-due unchecked items to today
+  await rolloverPastDueNotes();
   if (!vnCarouselStart) initVnCarousel();
   else renderVnCarousel();
   renderVnTodos();
   updateVnOrahBadge();
   loadTransportHistory();
   populateVnCategorySelectors();
+}
+
+async function rolloverPastDueNotes() {
+  const todayStr = toDateStr(new Date());
+  const todayDate = todayStr + 'T09:00:00';
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  let rolledCount = 0;
+  for (const note of vnNotes) {
+    if (note.status === 'completed' || note.status === 'archived') continue;
+    if (!note.due_date) continue;
+    const noteDate = toDateStr(new Date(note.due_date));
+    if (noteDate >= todayStr) continue;
+
+    // This note is past due and unchecked — roll to today
+    await fetch(SUPABASE_URL + '/rest/v1/voice_notes?id=eq.' + note.id, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ due_date: todayDate, updated_at: new Date().toISOString() })
+    });
+    note.due_date = todayDate;
+    rolledCount++;
+  }
+  if (rolledCount > 0) {
+    toast(rolledCount + ' overdue note(s) moved to today', true);
+  }
 }
 
 function updateVnStats() {
@@ -6128,7 +6172,6 @@ function renderVnTodos() {
   if (vnActiveCategory) {
     filtered = filtered.filter(n => n.category_id === vnActiveCategory);
   }
-  // Filter by selected date in carousel
   if (vnSelectedDate) {
     filtered = filtered.filter(n => {
       const noteDate = n.due_date ? toDateStr(new Date(n.due_date)) : toDateStr(new Date(n.created_at));
@@ -6148,9 +6191,8 @@ function renderVnTodos() {
   }
   empty.style.display = 'none';
 
-  // Group notes by category
+  // Group by category — show ALL columns so you can drag into empty ones
   const groups = {};
-  // Add uncategorized group
   groups['__uncategorized__'] = { name: 'Uncategorized', color: '#6B7C8D', notes: [] };
   vnCategories.forEach(c => { groups[c.id] = { name: c.name, color: c.color, notes: [] }; });
   filtered.forEach(n => {
@@ -6158,52 +6200,86 @@ function renderVnTodos() {
     groups[key].notes.push(n);
   });
 
-  // If filtering by category, only show that one expanded
-  const activeGroups = vnActiveCategory
+  const visibleGroups = vnActiveCategory
     ? Object.entries(groups).filter(([k]) => k === vnActiveCategory)
-    : Object.entries(groups).filter(([, g]) => g.notes.length > 0);
+    : Object.entries(groups);
 
-  list.innerHTML = activeGroups.map(([catId, group]) => {
-    const notesHtml = group.notes.map(n => {
-      const isComplete = n.status === 'completed';
-      const prioClass = (n.priority === 'high' || n.priority === 'urgent') ? ' priority-' + n.priority : '';
-      return `<div class="vn-note-card${isComplete ? ' completed' : ''}${prioClass}" data-id="${n.id}" draggable="true" ondragstart="startDragNote(event,'${n.id}')" onclick="toggleNoteExpand(this)">
-        <div class="vn-nc-actions">
-          <button class="vn-nc-act" onclick="event.stopPropagation();openVnNote('${n.id}')" title="Edit">&#9998;</button>
-          <button class="vn-nc-act danger" onclick="event.stopPropagation();deleteVnNote('${n.id}')" title="Delete">&times;</button>
-        </div>
-        <div class="vn-nc-top">
-          <div class="vn-nc-check${isComplete ? ' checked' : ''}" onclick="event.stopPropagation();toggleVnComplete('${n.id}')">&#10003;</div>
-          <div class="vn-nc-title">${esc(n.title || n.transcript.substring(0, 50))}</div>
-          <div class="vn-nc-time">${timeAgo(n.created_at)}</div>
-        </div>
-        <div class="vn-nc-details">
-          <div>${esc(n.transcript)}</div>
-          <div class="vn-nc-tags">
-            ${n.tagged_student ? '<span class="vn-todo-tag student">' + esc(n.tagged_student) + '</span>' : ''}
-            ${n.transport_request_id ? '<span class="vn-todo-tag transport" onclick="event.stopPropagation();openTransportFromNote(\'' + n.transport_request_id + '\')">Transport</span>' : ''}
-            ${n.due_date ? '<span class="vn-todo-tag time">Due: ' + new Date(n.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '</span>' : ''}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-
-    return `<div class="vn-cat-column">
-      <div class="vn-cat-column-header" onclick="filterVnCategory('${catId === '__uncategorized__' ? '' : catId}')">
-        <div class="vn-cat-column-title">
-          <span class="cat-dot" style="background:${group.color}"></span>
-          ${esc(group.name)}
-        </div>
-        <span class="vn-cat-column-count">${group.notes.length}</span>
-      </div>
-      <div class="vn-cat-column-body">${notesHtml}</div>
-    </div>`;
+  list.innerHTML = visibleGroups.map(([catId, group]) => {
+    const notesHtml = group.notes.map(n => buildNoteCard(n)).join('');
+    const dropCatId = catId === '__uncategorized__' ? '' : catId;
+    return '<div class="vn-cat-column" data-cat-id="' + dropCatId + '" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="dropNoteOnCategory(event,\'' + dropCatId + '\');this.classList.remove(\'drag-over\')">' +
+      '<div class="vn-cat-column-header">' +
+        '<div class="vn-cat-column-title"><span class="cat-dot" style="background:' + group.color + '"></span>' + esc(group.name) + '</div>' +
+        '<span class="vn-cat-column-count">' + group.notes.length + '</span>' +
+      '</div>' +
+      '<div class="vn-cat-column-body">' + notesHtml + '</div>' +
+    '</div>';
   }).join('');
+}
+
+function buildNoteCard(n) {
+  const isComplete = n.status === 'completed';
+  const prioClass = (n.priority === 'high' || n.priority === 'urgent') ? ' priority-' + n.priority : '';
+  const dueStr = n.due_date ? new Date(n.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+  const isOverdue = n.due_date && new Date(n.due_date) < new Date() && !isComplete;
+
+  return '<div class="vn-note-card' + (isComplete ? ' completed' : '') + prioClass + '" data-id="' + n.id + '" draggable="true" ondragstart="startDragNote(event,\'' + n.id + '\')" ondragend="endDragNote(event)" onclick="toggleNoteExpand(this)">' +
+    '<div class="vn-nc-actions">' +
+      '<button class="vn-nc-act" onclick="event.stopPropagation();openVnNote(\'' + n.id + '\')" title="Edit">&#9998;</button>' +
+      '<button class="vn-nc-act danger" onclick="event.stopPropagation();deleteVnNote(\'' + n.id + '\')" title="Delete">&times;</button>' +
+    '</div>' +
+    '<div class="vn-nc-top">' +
+      '<div class="vn-nc-check' + (isComplete ? ' checked' : '') + '" onclick="event.stopPropagation();toggleVnComplete(\'' + n.id + '\')">&#10003;</div>' +
+      '<div class="vn-nc-body">' +
+        '<div class="vn-nc-title">' + esc(n.title || n.transcript.substring(0, 60)) + '</div>' +
+        (dueStr ? '<div class="vn-nc-due' + (isOverdue ? ' overdue' : '') + '">Due: ' + dueStr + '</div>' : '') +
+        (n.tagged_student ? '<div class="vn-nc-student">@' + esc(n.tagged_student) + '</div>' : '') +
+      '</div>' +
+    '</div>' +
+    '<div class="vn-nc-details">' +
+      '<div>' + esc(n.transcript) + '</div>' +
+      '<div class="vn-nc-tags">' +
+        (n.transport_request_id ? '<span class="vn-todo-tag transport" onclick="event.stopPropagation();openTransportFromNote(\'' + n.transport_request_id + '\')">Transport</span>' : '') +
+        '<span class="vn-todo-tag time">' + timeAgo(n.created_at) + '</span>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
 }
 
 function toggleNoteExpand(el) {
   el.classList.toggle('expanded');
 }
+
+function endDragNote(event) {
+  event.target.classList.remove('dragging');
+}
+
+async function dropNoteOnCategory(event, newCatId) {
+  event.preventDefault();
+  const noteId = event.dataTransfer.getData('text/plain') || vnDragNoteId;
+  if (!noteId) return;
+  vnDragNoteId = null;
+
+  const note = vnNotes.find(n => n.id === noteId);
+  if (!note) return;
+  if ((note.category_id || '') === newCatId) return;
+
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  await fetch(SUPABASE_URL + '/rest/v1/voice_notes?id=eq.' + noteId, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category_id: newCatId || null, updated_at: new Date().toISOString() })
+  });
+
+  note.category_id = newCatId || null;
+  const newCat = vnCategories.find(c => c.id === newCatId);
+  renderVnTodos();
+  renderVnCategories();
+  renderVnCarousel();
+  toast('Moved to ' + (newCat ? newCat.name : 'Uncategorized'), true);
+}
+
+
 
 async function toggleVnComplete(noteId) {
   const note = vnNotes.find(n => n.id === noteId);
