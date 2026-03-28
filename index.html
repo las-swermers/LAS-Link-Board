@@ -1241,12 +1241,14 @@ body {
   background: var(--surface); border-left: 2px solid var(--border);
   box-shadow: -4px 0 20px rgba(11,37,69,0.08);
   z-index: 99; transition: right 0.3s ease;
-  overflow-y: auto; padding: 0;
+  overflow: hidden; padding: 0;
+  display: flex; flex-direction: column;
 }
 .vn-sidebar.open { right: 0; }
 .vn-sidebar-header {
   background: var(--navy); color: #fff; padding: 1.25rem 1.5rem;
   display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
   position: sticky; top: 0; z-index: 1;
 }
 .vn-sidebar-header h3 { font-family: 'Montserrat', sans-serif; font-size: 0.95rem; font-weight: 700; }
@@ -1255,7 +1257,7 @@ body {
   font-size: 1.25rem; padding: 4px; line-height: 1;
 }
 .vn-sidebar-close:hover { color: #fff; }
-.vn-sidebar-body { padding: 1.5rem; }
+.vn-sidebar-body { padding: 1.5rem; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
 /* ─── Transport Form ─── */
 .vn-form-group { margin-bottom: 1rem; }
