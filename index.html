@@ -2462,9 +2462,11 @@ body {
             <label>Due Date</label>
             <input type="datetime-local" id="vnNoteEditDue">
           </div>
-          <div class="field" style="margin-bottom:0.75rem">
-            <label>Tagged Student</label>
-            <input type="text" id="vnNoteEditStudent" placeholder="Student name from Orah...">
+          <div class="field" style="margin-bottom:0.75rem;position:relative">
+            <label>Tagged Student <span style="color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0">— type @ to search Orah</span></label>
+            <input type="text" id="vnNoteEditStudent" placeholder="@student name..." oninput="onNoteStudentInput(this.value)" autocomplete="off">
+            <input type="hidden" id="vnNoteEditStudentId">
+            <div class="vn-student-results" id="vnNoteStudentResults"></div>
           </div>
           <div class="modal-foot">
             <button class="btn btn-outline" onclick="closeModal('vnNoteOverlay')">Cancel</button>
@@ -6048,6 +6050,7 @@ function openVnNote(noteId) {
   document.getElementById('vnNoteEditPriority').value = note.priority || 'normal';
   document.getElementById('vnNoteEditDue').value = note.due_date ? note.due_date.slice(0, 16) : '';
   document.getElementById('vnNoteEditStudent').value = note.tagged_student || '';
+  document.getElementById('vnNoteEditStudentId').value = note.tagged_student_id || '';
   document.getElementById('vnNoteTitle').textContent = note.title || 'Voice Note';
   openModal('vnNoteOverlay');
 }
@@ -6063,6 +6066,7 @@ async function saveVnNote() {
     priority: document.getElementById('vnNoteEditPriority').value,
     due_date: document.getElementById('vnNoteEditDue').value || null,
     tagged_student: document.getElementById('vnNoteEditStudent').value.trim(),
+    tagged_student_id: document.getElementById('vnNoteEditStudentId').value || '',
     updated_at: new Date().toISOString()
   };
 
@@ -6619,11 +6623,81 @@ function selectOrahStudent(id, name, house, year) {
 
 // Close student results on outside click
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.vn-student-search')) {
+  if (!e.target.closest('.vn-student-search') && !e.target.closest('#vnNoteEditStudent')) {
     const el = document.getElementById('trStudentResults');
     if (el) el.classList.remove('show');
+    const el2 = document.getElementById('vnNoteStudentResults');
+    if (el2) el2.classList.remove('show');
   }
 });
+
+// ─── @Student Tagging in Note Editor ───
+let vnNoteStudentTimeout = null;
+
+function onNoteStudentInput(value) {
+  clearTimeout(vnNoteStudentTimeout);
+  const resultsEl = document.getElementById('vnNoteStudentResults');
+
+  // Strip leading @ if present
+  const query = value.replace(/^@/, '').trim();
+  if (query.length < 2) {
+    resultsEl.classList.remove('show');
+    return;
+  }
+
+  // Search cached students first
+  const cached = vnOrahStudents.filter(s =>
+    (s.name || (s.first_name + ' ' + s.last_name) || '').toLowerCase().includes(query.toLowerCase())
+  );
+  if (cached.length > 0) {
+    showNoteStudentResults(cached.slice(0, 6));
+    return;
+  }
+
+  // Debounce API call
+  vnNoteStudentTimeout = setTimeout(async () => {
+    if (!vnOrahSettings || !vnOrahSettings.orah_api_key) return;
+    try {
+      const res = await fetch('/api/voicenotes/orah-proxy', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + (currentSession?.access_token || SUPABASE_ANON), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          region: vnOrahSettings.orah_region,
+          api_key: vnOrahSettings.orah_api_key,
+          endpoint: 'students/list',
+          body: { search: query, limit: 8 }
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const students = data.students || data.data || data || [];
+        vnOrahStudents = [...vnOrahStudents, ...students.filter(s => !vnOrahStudents.find(e => e.id === s.id))];
+        showNoteStudentResults(students.slice(0, 6));
+      }
+    } catch (e) { console.warn('Orah note search error:', e); }
+  }, 400);
+}
+
+function showNoteStudentResults(students) {
+  const el = document.getElementById('vnNoteStudentResults');
+  if (!students.length) { el.classList.remove('show'); return; }
+  el.innerHTML = students.map(s => {
+    const name = s.name || (s.first_name + ' ' + s.last_name) || 'Unknown';
+    const house = s.house || s.boarding_house || '';
+    const year = s.year_group || s.grade || '';
+    return `<div class="vn-student-result" onclick="selectNoteStudent('${esc(s.id || '')}','${esc(name)}')">
+      <div><strong>${esc(name)}</strong></div>
+      <div class="student-house">${house ? esc(house) : ''}${year ? ' · Year ' + esc(year) : ''}</div>
+    </div>`;
+  }).join('');
+  el.classList.add('show');
+}
+
+function selectNoteStudent(id, name) {
+  document.getElementById('vnNoteEditStudent').value = name;
+  document.getElementById('vnNoteEditStudentId').value = id;
+  document.getElementById('vnNoteStudentResults').classList.remove('show');
+}
 
 // ─── Generate Transport from Voice Note ───
 function generateTransportFromNote() {
@@ -6722,6 +6796,8 @@ async function submitOrSaveTransport(status) {
       await createOrahPass(record);
       // Send to Google Chat if configured
       sendTransportToChat(record);
+      // Create a to-do item for this transport request
+      await createTodoFromTransport(record);
       toast('Transport request submitted!', true);
     } else {
       toast('Draft saved', true);
@@ -6880,12 +6956,15 @@ function loadTransportHistory() {
   }
   el.innerHTML = vnTransportRequests.map(tr => {
     const dateStr = tr.date_time ? new Date(tr.date_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'No date set';
-    return `<div class="vn-transport-card" onclick="viewTransportRequest('${tr.id}')">
+    return `<div class="vn-transport-card">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="tr-student">${esc(tr.student_name)}</span>
-        <span class="vn-transport-status ${tr.status}">${tr.status}</span>
+        <span class="tr-student" style="cursor:pointer" onclick="viewTransportRequest('${tr.id}')">${esc(tr.student_name)}</span>
+        <div style="display:flex;gap:0.35rem;align-items:center">
+          <span class="vn-transport-status ${tr.status}">${tr.status}</span>
+          <button onclick="event.stopPropagation();deleteTransportRequest('${tr.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:2px 4px;border-radius:4px;transition:all 0.15s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'" title="Delete">&times;</button>
+        </div>
       </div>
-      <div class="tr-dest">${esc(tr.destination || 'No destination')}</div>
+      <div class="tr-dest" style="cursor:pointer" onclick="viewTransportRequest('${tr.id}')">${esc(tr.destination || 'No destination')}</div>
       <div class="tr-date">${esc(tr.appointment_type || 'other')} · ${dateStr}</div>
     </div>`;
   }).join('');
@@ -6908,6 +6987,42 @@ function viewTransportRequest(trId) {
   document.getElementById('trReturnTime').value = tr.return_time ? tr.return_time.slice(0, 16) : '';
   document.getElementById('trSpecialInstructions').value = tr.special_instructions || '';
   document.getElementById('trVoiceNoteId').value = tr.voice_note_id || '';
+}
+
+async function deleteTransportRequest(trId) {
+  if (!confirm('Delete this transport request? This will also remove the linked to-do item.')) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  // Remove linked voice note (the to-do item created from this transport)
+  const linkedNote = vnNotes.find(n => n.transport_request_id === trId);
+  if (linkedNote) {
+    await fetch(SUPABASE_URL + '/rest/v1/voice_notes?id=eq.' + linkedNote.id, {
+      method: 'DELETE', headers
+    });
+    vnNotes = vnNotes.filter(n => n.id !== linkedNote.id);
+  }
+
+  // Also clear transport_request_id on any voice notes that sourced this request
+  const sourcedNotes = vnNotes.filter(n => n.transport_request_id === trId);
+  for (const n of sourcedNotes) {
+    await fetch(SUPABASE_URL + '/rest/v1/voice_notes?id=eq.' + n.id, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ transport_request_id: null })
+    });
+    n.transport_request_id = null;
+  }
+
+  // Delete the transport request itself
+  await fetch(SUPABASE_URL + '/rest/v1/transport_requests?id=eq.' + trId, {
+    method: 'DELETE', headers
+  });
+  vnTransportRequests = vnTransportRequests.filter(t => t.id !== trId);
+
+  updateVnStats();
+  renderVnTodos();
+  loadTransportHistory();
+  toast('Transport request deleted', true);
 }
 
 // ─── Google Calendar Integration ───
@@ -7009,6 +7124,43 @@ async function createOrahPass(tr) {
   } catch (e) {
     console.warn('Orah pass error:', e.message);
   }
+}
+
+async function createTodoFromTransport(tr) {
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+  // Find the Transport category
+  const transportCat = vnCategories.find(c => c.name.toLowerCase() === 'transport');
+  const type = (tr.appointment_type || 'Other').charAt(0).toUpperCase() + (tr.appointment_type || 'other').slice(1);
+  const dateStr = tr.date_time ? new Date(tr.date_time).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
+  const note = {
+    user_id: currentUser.id,
+    transcript: 'Transport: ' + tr.student_name + ' — ' + type + ' at ' + (tr.destination || 'TBD') + (dateStr ? ' on ' + dateStr : '') + (tr.appointment_details ? '. ' + tr.appointment_details : ''),
+    title: 'Transport: ' + tr.student_name + ' — ' + type,
+    category_id: transportCat ? transportCat.id : null,
+    priority: 'normal',
+    tagged_student: tr.student_name || '',
+    tagged_student_id: tr.student_id || '',
+    transport_request_id: tr.id,
+    due_date: tr.date_time || null,
+    status: 'pending'
+  };
+
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/voice_notes', {
+      method: 'POST', headers, body: JSON.stringify(note)
+    });
+    if (res.ok) {
+      const created = await res.json();
+      vnNotes.unshift(created[0] || created);
+      updateVnStats();
+      renderVnTodos();
+      if (vnCurrentView === 'month') renderVnMonthGrid();
+      else renderVnCarousel();
+    }
+  } catch (e) { console.warn('Failed to create todo from transport:', e); }
 }
 
 function buildOrahPassReason(tr) {
