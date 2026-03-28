@@ -2085,6 +2085,16 @@ body {
           </div>
 
           <div class="vt-card">
+            <h4>Google Calendar</h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Transport requests will be added to this calendar. Leave blank for your default calendar.</p>
+            <div class="vt-field">
+              <label>Calendar ID</label>
+              <input type="text" id="vtGoogleCalendarId" placeholder="e.g. transport@group.calendar.google.com">
+              <div class="vt-hint">Find in Google Calendar → Settings → Calendar ID. Leave blank to use your primary calendar.</div>
+            </div>
+          </div>
+
+          <div class="vt-card">
             <h4>Google Sheets (Optional)</h4>
             <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Log transport requests to a shared spreadsheet.</p>
             <div class="vt-field">
@@ -6930,6 +6940,7 @@ function loadIntegrationSettings() {
     document.getElementById('vtChatOnNote').checked = vnOrahSettings.chat_on_note !== false;
     document.getElementById('vtChatOnTransport').checked = vnOrahSettings.chat_on_transport !== false;
     document.getElementById('vtGoogleSheetsId').value = vnOrahSettings.google_sheets_id || '';
+    document.getElementById('vtGoogleCalendarId').value = vnOrahSettings.google_calendar_id || '';
   }
 }
 
@@ -6947,6 +6958,7 @@ async function saveIntegrationSettings() {
     chat_on_note: document.getElementById('vtChatOnNote').checked,
     chat_on_transport: document.getElementById('vtChatOnTransport').checked,
     google_sheets_id: document.getElementById('vtGoogleSheetsId').value.trim(),
+    google_calendar_id: document.getElementById('vtGoogleCalendarId').value.trim(),
     updated_at: new Date().toISOString()
   };
 
@@ -7604,14 +7616,18 @@ function addTransportToGoogleCalendar(tr) {
     '\n\n— Generated via LAS LinkBoard Voice Notes'
   );
 
+  // Use configured calendar or default to primary
+  const calId = vnOrahSettings?.google_calendar_id || '';
+  const calParam = calId ? '&src=' + encodeURIComponent(calId) : '';
+
   const calUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE' +
     '&text=' + title +
     '&dates=' + dates +
     '&details=' + details +
     '&location=' + location +
+    calParam +
     '&sf=true&output=xml';
 
-  // Open in new tab — user can confirm and save to their calendar
   window.open(calUrl, '_blank');
 }
 
