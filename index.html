@@ -2300,56 +2300,100 @@ body {
 
           <!-- Transport/Aura Settings -->
           <div id="vnTransportSettings" class="vn-transport-panel" style="display:none">
-            <div class="vn-form-group">
-              <label>Orah Region</label>
-              <select id="orahRegion">
-                <option value="https://open-api-ireland.orah.com/open-api">Europe / Middle East / Africa</option>
-                <option value="https://open-api-virginia.orah.com/open-api">Americas</option>
-                <option value="https://open-api-sydney.orah.com/open-api">Asia-Pacific</option>
-              </select>
-              <div class="vn-form-hint">Select the region matching your Orah instance</div>
+
+            <!-- ═══ Saved State Card (read-only) ═══ -->
+            <div id="vnSettingsSaved" style="display:none">
+              <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1rem">
+                <!-- Orah Section -->
+                <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem">
+                    <span style="font-family:Montserrat,sans-serif;font-size:0.78rem;font-weight:700;color:var(--navy)">Orah Integration</span>
+                    <span id="vnSettingsOrahBadge" class="vn-aura-badge" style="font-size:0.65rem;padding:0.2rem 0.5rem"><span class="aura-dot"></span> Not connected</span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem 1rem;font-size:0.78rem">
+                    <div><span style="color:var(--text-muted)">Region:</span> <span id="vnSavedRegion">—</span></div>
+                    <div><span style="color:var(--text-muted)">API Key:</span> <span id="vnSavedApiKey">—</span></div>
+                    <div><span style="color:var(--text-muted)">School:</span> <span id="vnSavedSchool">—</span></div>
+                  </div>
+                </div>
+                <!-- Transport Section -->
+                <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
+                  <div style="font-family:Montserrat,sans-serif;font-size:0.78rem;font-weight:700;color:var(--navy);margin-bottom:0.65rem">Transport</div>
+                  <div style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.78rem">
+                    <div><span style="color:var(--text-muted)">Email:</span> <span id="vnSavedEmail">—</span></div>
+                    <div><span style="color:var(--text-muted)">Google Sheet:</span> <span id="vnSavedSheets">—</span></div>
+                  </div>
+                </div>
+                <!-- Google Chat Section -->
+                <div style="padding:1rem 1.25rem">
+                  <div style="font-family:Montserrat,sans-serif;font-size:0.78rem;font-weight:700;color:var(--navy);margin-bottom:0.65rem">Google Chat</div>
+                  <div style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.78rem">
+                    <div><span style="color:var(--text-muted)">Webhook:</span> <span id="vnSavedWebhook">—</span></div>
+                    <div><span style="color:var(--text-muted)">Notify on:</span> <span id="vnSavedChatTriggers">—</span></div>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.5rem;justify-content:flex-end">
+                <button class="btn btn-outline btn-sm" onclick="testOrahConnection()">Test Orah</button>
+                <button class="btn btn-gold btn-sm" onclick="showSettingsEditMode()">Edit Settings</button>
+              </div>
             </div>
-            <div class="vn-form-group">
-              <label>Orah API Key</label>
-              <input type="password" id="orahApiKey" placeholder="Enter API key...">
-              <div class="vn-form-hint">Generate in Orah Admin Console. Contact your CSM if Open API isn't enabled.</div>
+
+            <!-- ═══ Edit Mode Form ═══ -->
+            <div id="vnSettingsEdit">
+              <div class="vn-form-group">
+                <label>Orah Region</label>
+                <select id="orahRegion">
+                  <option value="https://open-api-ireland.orah.com/open-api">Europe / Middle East / Africa</option>
+                  <option value="https://open-api-virginia.orah.com/open-api">Americas</option>
+                  <option value="https://open-api-sydney.orah.com/open-api">Asia-Pacific</option>
+                </select>
+                <div class="vn-form-hint">Select the region matching your Orah instance</div>
+              </div>
+              <div class="vn-form-group">
+                <label>Orah API Key</label>
+                <input type="password" id="orahApiKey" placeholder="Enter API key...">
+                <div class="vn-form-hint">Generate in Orah Admin Console. Contact your CSM if Open API isn't enabled.</div>
+              </div>
+              <div class="vn-form-group">
+                <label>School Name / ID</label>
+                <input type="text" id="orahSchoolId" placeholder="e.g. LAS">
+              </div>
+              <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0">
+              <div class="vn-form-group">
+                <label>Transport Department Email</label>
+                <input type="email" id="trTransportEmail" placeholder="transport@school.edu">
+                <div class="vn-form-hint">Transport requests will be emailed here as a formatted PDF</div>
+              </div>
+              <div class="vn-form-group">
+                <label>Google Sheets ID (Optional)</label>
+                <input type="text" id="trGoogleSheetsId" placeholder="Spreadsheet ID from URL">
+                <div class="vn-form-hint">Alternatively log requests to a shared Google Sheet</div>
+              </div>
+              <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0">
+              <div class="vn-form-group">
+                <label>Google Chat Webhook URL</label>
+                <input type="text" id="trGoogleChatWebhook" placeholder="https://chat.googleapis.com/v1/spaces/...">
+                <div class="vn-form-hint">Voice notes and transport requests will be posted to this Chat space. <a href="https://developers.google.com/chat/how-tos/webhooks" target="_blank" style="color:var(--gold);font-weight:600">How to create a webhook</a></div>
+              </div>
+              <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem">
+                <label style="font-family:'Montserrat',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Send to Chat when:</label>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem">
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
+                  <input type="checkbox" id="trChatOnNote" checked> New voice note is created
+                </label>
+                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
+                  <input type="checkbox" id="trChatOnTransport" checked> Transport request is submitted
+                </label>
+              </div>
+              <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
+                <button class="btn btn-outline btn-sm" onclick="cancelSettingsEdit()">Cancel</button>
+                <button class="btn btn-outline btn-sm" onclick="testOrahConnection()">Test Orah</button>
+                <button class="btn btn-gold" onclick="saveOrahSettings()">Save Settings</button>
+              </div>
             </div>
-            <div class="vn-form-group">
-              <label>School Name / ID</label>
-              <input type="text" id="orahSchoolId" placeholder="e.g. LAS">
-            </div>
-            <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0">
-            <div class="vn-form-group">
-              <label>Transport Department Email</label>
-              <input type="email" id="trTransportEmail" placeholder="transport@school.edu">
-              <div class="vn-form-hint">Transport requests will be emailed here as a formatted PDF</div>
-            </div>
-            <div class="vn-form-group">
-              <label>Google Sheets ID (Optional)</label>
-              <input type="text" id="trGoogleSheetsId" placeholder="Spreadsheet ID from URL">
-              <div class="vn-form-hint">Alternatively log requests to a shared Google Sheet</div>
-            </div>
-            <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0">
-            <div class="vn-form-group">
-              <label>Google Chat Webhook URL</label>
-              <input type="text" id="trGoogleChatWebhook" placeholder="https://chat.googleapis.com/v1/spaces/...">
-              <div class="vn-form-hint">Voice notes and transport requests will be posted to this Chat space. <a href="https://developers.google.com/chat/how-tos/webhooks" target="_blank" style="color:var(--gold);font-weight:600">How to create a webhook</a></div>
-            </div>
-            <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem">
-              <label style="font-family:'Montserrat',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Send to Chat when:</label>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem">
-              <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
-                <input type="checkbox" id="trChatOnNote" checked> New voice note is created
-              </label>
-              <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
-                <input type="checkbox" id="trChatOnTransport" checked> Transport request is submitted
-              </label>
-            </div>
-            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
-              <button class="btn btn-outline btn-sm" onclick="testOrahConnection()">Test Orah Connection</button>
-              <button class="btn btn-gold" onclick="saveOrahSettings()">Save Settings</button>
-            </div>
+
           </div>
         </div>
       </div>
@@ -6389,6 +6433,52 @@ function loadOrahSettingsForm() {
     document.getElementById('trChatOnNote').checked = vnOrahSettings.chat_on_note !== false;
     document.getElementById('trChatOnTransport').checked = vnOrahSettings.chat_on_transport !== false;
   }
+  // Show saved card if settings exist, edit form if not
+  const hasSettings = vnOrahSettings && (vnOrahSettings.orah_api_key || vnOrahSettings.transport_email || vnOrahSettings.google_chat_webhook);
+  document.getElementById('vnSettingsSaved').style.display = hasSettings ? 'block' : 'none';
+  document.getElementById('vnSettingsEdit').style.display = hasSettings ? 'none' : 'block';
+  if (hasSettings) renderSettingsSavedCard();
+}
+
+function renderSettingsSavedCard() {
+  const s = vnOrahSettings || {};
+  // Orah
+  const regionMap = {
+    'https://open-api-ireland.orah.com/open-api': 'Europe',
+    'https://open-api-virginia.orah.com/open-api': 'Americas',
+    'https://open-api-sydney.orah.com/open-api': 'Asia-Pacific'
+  };
+  document.getElementById('vnSavedRegion').textContent = regionMap[s.orah_region] || 'Not set';
+  document.getElementById('vnSavedApiKey').textContent = s.orah_api_key ? '••••••' + s.orah_api_key.slice(-4) : 'Not set';
+  document.getElementById('vnSavedSchool').textContent = s.school_id || 'Not set';
+  // Orah badge
+  const badge = document.getElementById('vnSettingsOrahBadge');
+  if (s.orah_api_key) {
+    badge.classList.add('connected');
+    badge.innerHTML = '<span class="aura-dot"></span> Connected';
+  } else {
+    badge.classList.remove('connected');
+    badge.innerHTML = '<span class="aura-dot"></span> Not connected';
+  }
+  // Transport
+  document.getElementById('vnSavedEmail').textContent = s.transport_email || 'Not set';
+  document.getElementById('vnSavedSheets').textContent = s.google_sheets_id ? '••••' + s.google_sheets_id.slice(-6) : 'Not set';
+  // Chat
+  document.getElementById('vnSavedWebhook').textContent = s.google_chat_webhook ? 'Connected' : 'Not set';
+  const triggers = [];
+  if (s.chat_on_note !== false) triggers.push('Voice notes');
+  if (s.chat_on_transport !== false) triggers.push('Transport');
+  document.getElementById('vnSavedChatTriggers').textContent = triggers.length ? triggers.join(', ') : 'None';
+}
+
+function showSettingsEditMode() {
+  document.getElementById('vnSettingsSaved').style.display = 'none';
+  document.getElementById('vnSettingsEdit').style.display = 'block';
+}
+
+function cancelSettingsEdit() {
+  // Revert form to saved values and switch back to card
+  loadOrahSettingsForm();
 }
 
 async function saveOrahSettings() {
@@ -6423,7 +6513,11 @@ async function saveOrahSettings() {
     }
   }
   updateVnOrahBadge();
-  toast('Orah settings saved', true);
+  toast('Settings saved!', true);
+  // Switch to saved card view
+  renderSettingsSavedCard();
+  document.getElementById('vnSettingsSaved').style.display = 'block';
+  document.getElementById('vnSettingsEdit').style.display = 'none';
 }
 
 async function testOrahConnection() {
