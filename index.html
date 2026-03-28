@@ -1683,6 +1683,9 @@ body {
         <div class="kpi-card" style="display:none"><div class="kpi-val" id="kpiUniqueOpens">0</div><div class="kpi-label">Unique Opens</div><div class="kpi-change flat" id="kpiUniqueChange">—</div></div>
         <div class="kpi-card"><div class="kpi-val" id="kpiActiveQR">0</div><div class="kpi-label">Active QR Codes</div><div class="kpi-change flat" id="kpiQRChange">—</div></div>
         <div class="kpi-card" style="display:none"><div class="kpi-val" id="kpiActiveCamp">0</div><div class="kpi-label">Campaigns</div><div class="kpi-change flat" id="kpiCampChange">—</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpiVtWords">0</div><div class="kpi-label">Words Dictated</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpiVtMinutes">0</div><div class="kpi-label">Minutes Transcribed</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpiVtTranscriptions">0</div><div class="kpi-label">Transcriptions</div></div>
       </div>
 
       <!-- Time Series Charts -->
@@ -1831,7 +1834,6 @@ body {
         <!-- ─── Navigation Tabs ─── -->
         <div class="vt-tabs">
           <button class="vt-tab active" onclick="switchVtTab('skills')">Skills</button>
-          <button class="vt-tab" onclick="switchVtTab('usage')">Usage</button>
           <button class="vt-tab" onclick="switchVtTab('settings')">API Keys</button>
           <button class="vt-tab" onclick="switchVtTab('integrations')">Integrations</button>
           <button class="vt-tab" onclick="switchVtTab('download')">Download</button>
@@ -4272,6 +4274,28 @@ async function loadAnalyticsDashboard() {
   dashGoals = JSON.parse(localStorage.getItem('lb_goals_' + currentUser.id) || '[]');
 
   renderDashboard();
+
+  // Load voice usage stats for analytics KPIs
+  loadVtUsageForAnalytics();
+}
+
+async function loadVtUsageForAnalytics() {
+  if (!currentUser) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/voicetype_usage?user_id=eq.' + currentUser.id, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token }
+    });
+    if (res.ok) {
+      const usage = await res.json();
+      const totalSeconds = usage.reduce((s, u) => s + (u.duration_seconds || 0), 0);
+      const totalMinutes = (totalSeconds / 60).toFixed(1);
+      const estWords = Math.round((totalSeconds / 60) * 150);
+      document.getElementById('kpiVtWords').textContent = estWords.toLocaleString();
+      document.getElementById('kpiVtMinutes').textContent = totalMinutes;
+      document.getElementById('kpiVtTranscriptions').textContent = usage.length;
+    }
+  } catch (e) { console.warn('Voice usage load error:', e); }
 }
 
 function renderDashboard() {
