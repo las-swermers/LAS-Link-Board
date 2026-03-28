@@ -1323,10 +1323,10 @@ body {
   box-shadow: -2px 0 10px rgba(11,37,69,0.15);
 }
 .vn-sidebar-toggle:hover { background: var(--gold); }
-.vn-sidebar-toggle.active { background: var(--gold); }
+.vn-sidebar-toggle.active { background: var(--gold); right: 460px; }
 
 .vn-sidebar {
-  position: fixed; right: -420px; top: 0; width: 420px; height: 100dvh; height: 100vh;
+  position: fixed; right: -460px; top: 0; width: 460px; height: 100dvh; height: 100vh;
   background: var(--surface); border-left: 2px solid var(--border);
   box-shadow: -4px 0 20px rgba(11,37,69,0.08);
   z-index: 99; transition: right 0.3s ease;
@@ -2041,9 +2041,7 @@ body {
               <div class="vt-hint"><a href="https://developers.google.com/chat/how-tos/webhooks" target="_blank" style="color:var(--gold);font-weight:600">How to create a webhook</a></div>
             </div>
             <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.5rem">
-              <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
-                <input type="checkbox" id="vtChatOnNote" checked> Notify on new voice notes
-              </label>
+              <input type="hidden" id="vtChatOnNote" value="false">
               <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
                 <input type="checkbox" id="vtChatOnTransport" checked> Notify on transport requests
               </label>
@@ -2228,7 +2226,7 @@ body {
           </div>
 
           <!-- Date Strip (carousel view) -->
-          <div id="vnDateCarousel" style="display:flex;gap:0.5rem;overflow-x:auto;padding:0.25rem 0 0.5rem;margin-bottom:0.75rem;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin">
+          <div id="vnDateCarousel" style="display:flex;gap:0.5rem;overflow-x:auto;padding:0.25rem 0 0.75rem;margin-bottom:0.75rem;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin;cursor:grab">
           </div>
 
           <!-- Month Grid (hidden by default) -->
@@ -2430,11 +2428,9 @@ body {
                 <label style="font-family:'Montserrat',sans-serif;font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Send to Chat when:</label>
               </div>
               <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem">
+                <input type="hidden" id="trChatOnNote" value="false">
                 <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
-                  <input type="checkbox" id="trChatOnNote" checked> New voice note is created
-                </label>
-                <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
-                  <input type="checkbox" id="trChatOnTransport" checked> Transport request is submitted
+                  <input type="checkbox" id="trChatOnTransport" checked> Notify on transport requests
                 </label>
               </div>
               <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
@@ -6048,7 +6044,6 @@ async function addQuickNote() {
     renderVnCategories();
     if (vnCurrentView === 'month') renderVnMonthGrid();
     else renderVnCarousel();
-    sendVoiceNoteToChat(newNote);
     input.value = '';
     document.getElementById('vnQuickCategory').value = '';
     toast('Note added', true);
@@ -6201,8 +6196,6 @@ async function createVoiceNote(transcript, durationSec) {
     vnNotes.unshift(newNote);
     updateVnStats();
     renderVnTodos();
-    // Send to Google Chat if configured
-    sendVoiceNoteToChat(newNote);
   }
 }
 
@@ -6433,11 +6426,28 @@ const VN_CAROUSEL_DAYS = 14; // show 14 days at a time
 function initVnCarousel() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  // Start 2 days before today so today is visible near the left
   vnCarouselStart = new Date(today);
   vnCarouselStart.setDate(vnCarouselStart.getDate() - 2);
   vnSelectedDate = toDateStr(today);
   renderVnCarousel();
+
+  // Enable mouse-drag scrolling on the carousel
+  const el = document.getElementById('vnDateCarousel');
+  let isDown = false, startX, scrollLeft;
+  el.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.vn-date-square')) return; // don't hijack clicks
+    isDown = true; el.style.cursor = 'grabbing';
+    startX = e.pageX - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+  });
+  el.addEventListener('mouseleave', () => { isDown = false; el.style.cursor = 'grab'; });
+  el.addEventListener('mouseup', () => { isDown = false; el.style.cursor = 'grab'; });
+  el.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    el.scrollLeft = scrollLeft - (x - startX);
+  });
 }
 
 function toDateStr(d) {
