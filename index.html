@@ -1683,6 +1683,9 @@ body {
         <div class="kpi-card" style="display:none"><div class="kpi-val" id="kpiUniqueOpens">0</div><div class="kpi-label">Unique Opens</div><div class="kpi-change flat" id="kpiUniqueChange">—</div></div>
         <div class="kpi-card"><div class="kpi-val" id="kpiActiveQR">0</div><div class="kpi-label">Active QR Codes</div><div class="kpi-change flat" id="kpiQRChange">—</div></div>
         <div class="kpi-card" style="display:none"><div class="kpi-val" id="kpiActiveCamp">0</div><div class="kpi-label">Campaigns</div><div class="kpi-change flat" id="kpiCampChange">—</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpiVtWords">0</div><div class="kpi-label">Words Dictated</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpiVtMinutes">0</div><div class="kpi-label">Minutes Transcribed</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpiVtTranscriptions">0</div><div class="kpi-label">Transcriptions</div></div>
       </div>
 
       <!-- Time Series Charts -->
@@ -1830,101 +1833,14 @@ body {
 
         <!-- ─── Navigation Tabs ─── -->
         <div class="vt-tabs">
-          <button class="vt-tab active" onclick="switchVtTab('dictate')">Dictate</button>
-          <button class="vt-tab" onclick="switchVtTab('skills')">Skills</button>
-          <button class="vt-tab" onclick="switchVtTab('usage')">Usage</button>
-          <button class="vt-tab" onclick="switchVtTab('settings')">Settings</button>
+          <button class="vt-tab active" onclick="switchVtTab('skills')">Skills</button>
+          <button class="vt-tab" onclick="switchVtTab('settings')">API Keys</button>
+          <button class="vt-tab" onclick="switchVtTab('integrations')">Integrations</button>
           <button class="vt-tab" onclick="switchVtTab('download')">Download</button>
         </div>
 
-        <!-- ═══ DICTATE PANEL (primary — Glaido-style recorder + formatter) ═══ -->
-        <div class="vt-panel active" id="vtPanelDictate">
-
-          <!-- Skill Selector -->
-          <div class="vt-skill-bar">
-            <label class="vt-skill-bar-label">Output format</label>
-            <div class="vt-skill-selector">
-              <select id="vtActiveSkill" onchange="onVtSkillChange()">
-                <option value="">Auto-detect from speech</option>
-                <!-- Populated by JS -->
-              </select>
-              <div class="vt-skill-hint" id="vtSkillHint">Start talking naturally — VoiceType detects your intent and formats automatically.</div>
-            </div>
-          </div>
-
-          <!-- Recording Area -->
-          <div class="vt-record-area" id="vtRecordArea">
-            <div class="vt-mic-ring" id="vtMicRing">
-              <button class="vt-mic-btn" id="vtRecordBtn" onclick="toggleVtRecording()">
-                <svg id="vtMicIcon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                <svg id="vtStopIcon" style="display:none" width="28" height="28" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-              </button>
-            </div>
-            <div class="vt-record-label" id="vtRecordLabel">Click to start recording</div>
-            <div id="vtRecordTimer" style="font-family:Montserrat,sans-serif;font-size:2rem;font-weight:800;color:var(--gold);display:none">0:00</div>
-
-            <!-- Waveform animation (visible during recording) -->
-            <div class="vt-waveform" id="vtWaveform" style="display:none">
-              <span></span><span></span><span></span><span></span><span></span>
-            </div>
-
-            <div id="vtRecordStatus" style="font-size:0.82rem;color:var(--text-muted);margin-top:0.5rem;min-height:1.2em"></div>
-          </div>
-
-          <!-- Transcript Result (appears after recording) -->
-          <div id="vtTranscriptResult" class="vt-transcript-result" style="display:none">
-            <div class="vt-transcript-header">
-              <label>Raw Transcription</label>
-              <div class="vt-transcript-actions-top">
-                <button class="btn btn-soft btn-sm" onclick="clearVtTranscript()" style="color:var(--text-muted)">Clear</button>
-              </div>
-            </div>
-            <div id="vtTranscriptText" contenteditable="true" class="vt-transcript-box"></div>
-
-            <!-- Format Actions -->
-            <div class="vt-format-bar">
-              <div class="vt-format-left">
-                <button class="btn btn-gold" id="vtFormatBtn" onclick="formatVtTranscript()" style="border-radius:24px;padding:0.5rem 1.5rem">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-3px;margin-right:6px"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                  Format with AI
-                </button>
-                <span class="vt-format-skill-tag" id="vtFormatSkillTag" style="display:none"></span>
-              </div>
-              <div class="vt-format-right">
-                <button class="btn btn-soft btn-sm" onclick="copyVtTranscript()">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  Copy
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Formatted Output (appears after AI formatting) -->
-          <div id="vtFormattedResult" class="vt-formatted-result" style="display:none">
-            <div class="vt-formatted-header">
-              <label id="vtFormattedLabel">Formatted Output</label>
-              <span class="vt-formatted-badge" id="vtFormattedBadge"></span>
-            </div>
-            <div id="vtFormattedText" contenteditable="true" class="vt-formatted-box"></div>
-            <div class="vt-format-bar">
-              <div class="vt-format-left">
-                <button class="btn btn-soft btn-sm" onclick="reformatVtTranscript()" style="border-radius:20px">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                  Re-format
-                </button>
-              </div>
-              <div class="vt-format-right">
-                <button class="btn btn-gold btn-sm" onclick="copyVtFormatted()" style="border-radius:20px">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  Copy Formatted
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ═══ SKILLS PANEL ═══ -->
-        <div class="vt-panel" id="vtPanelSkills">
+        <!-- ═══ SKILLS PANEL (now first/default) ═══ -->
+        <div class="vt-panel active" id="vtPanelSkills">
           <div class="vt-card">
             <h4 style="display:flex;align-items:center;justify-content:space-between">
               AI Formatting Skills
@@ -1938,24 +1854,6 @@ body {
             </div>
           </div>
 
-          <div class="vt-card" id="vtAnthropicCard" style="display:none">
-            <h4>Anthropic API Key</h4>
-            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Required for AI formatting. Powers the skill system via Claude.</p>
-            <div class="vt-field">
-              <label>API Key</label>
-              <div class="vt-api-key-wrap">
-                <input type="password" id="vtAnthropicKey" placeholder="sk-ant-..." autocomplete="off">
-                <button class="btn btn-soft btn-sm" onclick="toggleVtAnthropicKeyVisibility()" id="vtAnthropicKeyToggle">Show</button>
-                <button class="btn btn-danger-ghost btn-sm" onclick="deleteVtAnthropicKey()" title="Remove Anthropic API key">Delete</button>
-              </div>
-              <div class="vt-hint">Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--gold);font-weight:600">console.anthropic.com</a></div>
-            </div>
-            <div class="vt-field">
-              <label>API Base URL <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
-              <input type="text" id="vtAnthropicBaseUrl" placeholder="https://api.anthropic.com (default)" autocomplete="off">
-              <div class="vt-hint">For HIPAA compliance, use an AWS Bedrock or Azure endpoint with a BAA.</div>
-            </div>
-          </div>
         </div>
 
         <!-- ═══ USAGE PANEL ═══ -->
@@ -1990,6 +1888,7 @@ body {
         </div>
 
         <!-- ═══ SETTINGS PANEL ═══ -->
+        <!-- ═══ API KEYS PANEL ═══ -->
         <div class="vt-panel" id="vtPanelSettings">
           <div class="vt-card">
             <h4>Transcription Mode</h4>
@@ -1997,7 +1896,7 @@ body {
               <label>Processing</label>
               <select id="vtTranscriptionMode" onchange="onVtModeChange()">
                 <option value="cloud">Cloud — OpenAI Whisper API (requires API key)</option>
-                <option value="local">Local — On-device (HIPAA-safe, no data leaves machine)</option>
+                <option value="local">Local — On-device (free, no data leaves machine)</option>
               </select>
               <div id="vtModeHint" class="vt-hint"></div>
             </div>
@@ -2005,6 +1904,7 @@ body {
 
           <div class="vt-card" id="vtApiKeyCard">
             <h4>OpenAI API Key</h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Required for cloud transcription (Whisper). Not needed if using local mode.</p>
             <div class="vt-field">
               <label>API Key</label>
               <div class="vt-api-key-wrap">
@@ -2012,14 +1912,33 @@ body {
                 <button class="btn btn-soft btn-sm" onclick="toggleVtKeyVisibility()" id="vtKeyToggle">Show</button>
                 <button class="btn btn-danger-ghost btn-sm" onclick="deleteVtApiKey()" title="Remove API key">Delete</button>
               </div>
-              <div class="vt-hint">Your key is encrypted and stored securely. Get one at <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--gold);font-weight:600">platform.openai.com</a></div>
+              <div class="vt-hint">Encrypted at rest. Get one at <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--gold);font-weight:600">platform.openai.com</a></div>
+            </div>
+          </div>
+
+          <div class="vt-card" id="vtAnthropicCard">
+            <h4>Anthropic API Key (Claude)</h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Powers AI formatting skills and auto-categorization of voice notes.</p>
+            <div class="vt-field">
+              <label>API Key</label>
+              <div class="vt-api-key-wrap">
+                <input type="password" id="vtAnthropicKey" placeholder="sk-ant-..." autocomplete="off">
+                <button class="btn btn-soft btn-sm" onclick="toggleVtAnthropicKeyVisibility()" id="vtAnthropicKeyToggle">Show</button>
+                <button class="btn btn-danger-ghost btn-sm" onclick="deleteVtAnthropicKey()" title="Remove Anthropic API key">Delete</button>
+              </div>
+              <div class="vt-hint">Encrypted at rest. Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--gold);font-weight:600">console.anthropic.com</a></div>
+            </div>
+            <div class="vt-field">
+              <label>API Base URL <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+              <input type="text" id="vtAnthropicBaseUrl" placeholder="https://api.anthropic.com (default)" autocomplete="off">
+              <div class="vt-hint">For HIPAA compliance, use an AWS Bedrock or Azure endpoint with a BAA.</div>
             </div>
           </div>
 
           <div class="vt-card">
-            <h4>Preferences</h4>
+            <h4>Desktop App Preferences</h4>
             <div class="vt-field">
-              <label>Global Hotkey (Desktop App)</label>
+              <label>Global Hotkey</label>
               <select id="vtHotkey">
                 <option value="CommandOrControl+Shift+Space">Ctrl/Cmd + Shift + Space</option>
                 <option value="CommandOrControl+Shift+V">Ctrl/Cmd + Shift + V</option>
@@ -2057,6 +1976,76 @@ body {
           <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
             <button class="btn btn-outline btn-sm" onclick="loadVtSettings()">Reset</button>
             <button class="btn btn-gold" onclick="saveVtSettings()">Save Settings</button>
+          </div>
+        </div>
+
+        <!-- ═══ INTEGRATIONS PANEL ═══ -->
+        <div class="vt-panel" id="vtPanelIntegrations">
+          <div class="vt-card">
+            <h4>Orah Integration</h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Connect to Orah for student lookup, @tagging, and automatic pass creation.</p>
+            <div class="vt-field">
+              <label>Region</label>
+              <select id="vtOrahRegion">
+                <option value="https://open-api-ireland.orah.com/open-api">Europe / Middle East / Africa</option>
+                <option value="https://open-api-virginia.orah.com/open-api">Americas</option>
+                <option value="https://open-api-sydney.orah.com/open-api">Asia-Pacific</option>
+              </select>
+            </div>
+            <div class="vt-field">
+              <label>API Key</label>
+              <div class="vt-api-key-wrap">
+                <input type="password" id="vtOrahApiKey" placeholder="Enter Orah API key..." autocomplete="off">
+                <button class="btn btn-soft btn-sm" onclick="toggleVtOrahKeyVisibility()" id="vtOrahKeyToggle">Show</button>
+                <button class="btn btn-danger-ghost btn-sm" onclick="document.getElementById('vtOrahApiKey').value=''" title="Clear">Delete</button>
+              </div>
+              <div class="vt-hint">Generate in Orah Admin Console → Settings → Open API</div>
+            </div>
+            <div class="vt-field">
+              <label>School Name / ID</label>
+              <input type="text" id="vtOrahSchoolId" placeholder="e.g. LAS">
+            </div>
+          </div>
+
+          <div class="vt-card">
+            <h4>Transport Email</h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Transport requests will be emailed to this address with a PDF attachment.</p>
+            <div class="vt-field">
+              <label>Email Address</label>
+              <input type="email" id="vtTransportEmail" placeholder="transport@school.edu">
+            </div>
+          </div>
+
+          <div class="vt-card">
+            <h4>Google Chat</h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Post voice notes and transport requests to a Google Chat space.</p>
+            <div class="vt-field">
+              <label>Webhook URL</label>
+              <input type="text" id="vtGoogleChatWebhook" placeholder="https://chat.googleapis.com/v1/spaces/...">
+              <div class="vt-hint"><a href="https://developers.google.com/chat/how-tos/webhooks" target="_blank" style="color:var(--gold);font-weight:600">How to create a webhook</a></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.5rem">
+              <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
+                <input type="checkbox" id="vtChatOnNote" checked> Notify on new voice notes
+              </label>
+              <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
+                <input type="checkbox" id="vtChatOnTransport" checked> Notify on transport requests
+              </label>
+            </div>
+          </div>
+
+          <div class="vt-card">
+            <h4>Google Sheets (Optional)</h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Log transport requests to a shared spreadsheet.</p>
+            <div class="vt-field">
+              <label>Spreadsheet ID</label>
+              <input type="text" id="vtGoogleSheetsId" placeholder="From the spreadsheet URL">
+            </div>
+          </div>
+
+          <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
+            <button class="btn btn-outline btn-sm" onclick="testOrahConnectionFromSettings()">Test Orah</button>
+            <button class="btn btn-gold" onclick="saveIntegrationSettings()">Save Integrations</button>
           </div>
         </div>
 
@@ -4285,6 +4274,28 @@ async function loadAnalyticsDashboard() {
   dashGoals = JSON.parse(localStorage.getItem('lb_goals_' + currentUser.id) || '[]');
 
   renderDashboard();
+
+  // Load voice usage stats for analytics KPIs
+  loadVtUsageForAnalytics();
+}
+
+async function loadVtUsageForAnalytics() {
+  if (!currentUser) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/voicetype_usage?user_id=eq.' + currentUser.id, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token }
+    });
+    if (res.ok) {
+      const usage = await res.json();
+      const totalSeconds = usage.reduce((s, u) => s + (u.duration_seconds || 0), 0);
+      const totalMinutes = (totalSeconds / 60).toFixed(1);
+      const estWords = Math.round((totalSeconds / 60) * 150);
+      document.getElementById('kpiVtWords').textContent = estWords.toLocaleString();
+      document.getElementById('kpiVtMinutes').textContent = totalMinutes;
+      document.getElementById('kpiVtTranscriptions').textContent = usage.length;
+    }
+  } catch (e) { console.warn('Voice usage load error:', e); }
 }
 
 function renderDashboard() {
@@ -4836,16 +4847,26 @@ let vtSkills = [];
 function switchVtTab(panel) {
   document.querySelectorAll('.vt-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.vt-panel').forEach(p => p.classList.remove('active'));
+  // Map tab names to panel IDs
+  const panelMap = {
+    'skills': 'vtPanelSkills',
+    'usage': 'vtPanelUsage',
+    'settings': 'vtPanelSettings',
+    'integrations': 'vtPanelIntegrations',
+    'download': 'vtPanelDownload',
+    'api keys': 'vtPanelSettings'
+  };
   const btn = [...document.querySelectorAll('.vt-tab')].find(t => {
     const txt = t.textContent.toLowerCase().trim();
-    return txt === panel.toLowerCase();
+    return txt === panel.toLowerCase() || txt === 'api keys' && panel === 'settings';
   });
   if (btn) btn.classList.add('active');
-  const el = document.getElementById('vtPanel' + panel.charAt(0).toUpperCase() + panel.slice(1));
+  const el = document.getElementById(panelMap[panel.toLowerCase()] || 'vtPanel' + panel.charAt(0).toUpperCase() + panel.slice(1));
   if (el) el.classList.add('active');
   if (panel === 'usage') loadVtUsage();
   if (panel === 'download') detectVtOS();
   if (panel === 'skills') loadVtSkills();
+  if (panel === 'integrations') loadIntegrationSettings();
 }
 
 async function loadVtSettings() {
@@ -4918,7 +4939,7 @@ async function loadVtSkills() {
   populateSkillSelector();
   // Show Anthropic key section always (users need it for formatting)
   const hasFormatSkills = vtSkills.some(s => s.category !== 'raw' && s.system_prompt);
-  document.getElementById('vtAnthropicCard').style.display = hasFormatSkills ? '' : 'none';
+  // Anthropic card is now always visible in API Keys tab
 }
 
 function renderSkillsList() {
@@ -6642,6 +6663,78 @@ function renderSettingsSavedCard() {
 function showSettingsEditMode() {
   document.getElementById('vnSettingsSaved').style.display = 'none';
   document.getElementById('vnSettingsEdit').style.display = 'block';
+}
+
+// ─── Settings Tab Integrations Panel ───
+function loadIntegrationSettings() {
+  if (vnOrahSettings) {
+    document.getElementById('vtOrahRegion').value = vnOrahSettings.orah_region || 'https://open-api-ireland.orah.com/open-api';
+    document.getElementById('vtOrahApiKey').value = vnOrahSettings.orah_api_key || '';
+    document.getElementById('vtOrahSchoolId').value = vnOrahSettings.school_id || '';
+    document.getElementById('vtTransportEmail').value = vnOrahSettings.transport_email || '';
+    document.getElementById('vtGoogleChatWebhook').value = vnOrahSettings.google_chat_webhook || '';
+    document.getElementById('vtChatOnNote').checked = vnOrahSettings.chat_on_note !== false;
+    document.getElementById('vtChatOnTransport').checked = vnOrahSettings.chat_on_transport !== false;
+    document.getElementById('vtGoogleSheetsId').value = vnOrahSettings.google_sheets_id || '';
+  }
+}
+
+async function saveIntegrationSettings() {
+  if (!currentUser) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+  const data = {
+    user_id: currentUser.id,
+    orah_region: document.getElementById('vtOrahRegion').value,
+    orah_api_key: document.getElementById('vtOrahApiKey').value.trim(),
+    school_id: document.getElementById('vtOrahSchoolId').value.trim(),
+    transport_email: document.getElementById('vtTransportEmail').value.trim(),
+    google_chat_webhook: document.getElementById('vtGoogleChatWebhook').value.trim(),
+    chat_on_note: document.getElementById('vtChatOnNote').checked,
+    chat_on_transport: document.getElementById('vtChatOnTransport').checked,
+    google_sheets_id: document.getElementById('vtGoogleSheetsId').value.trim(),
+    updated_at: new Date().toISOString()
+  };
+
+  if (vnOrahSettings && vnOrahSettings.id) {
+    await fetch(SUPABASE_URL + '/rest/v1/orah_settings?id=eq.' + vnOrahSettings.id, {
+      method: 'PATCH', headers, body: JSON.stringify(data)
+    });
+    Object.assign(vnOrahSettings, data);
+  } else {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/orah_settings', {
+      method: 'POST', headers, body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      const created = await res.json();
+      vnOrahSettings = created[0] || created;
+    }
+  }
+  updateVnOrahBadge();
+  toast('Integration settings saved!', true);
+}
+
+function toggleVtOrahKeyVisibility() {
+  const inp = document.getElementById('vtOrahApiKey');
+  const btn = document.getElementById('vtOrahKeyToggle');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Hide'; }
+  else { inp.type = 'password'; btn.textContent = 'Show'; }
+}
+
+async function testOrahConnectionFromSettings() {
+  const apiKey = document.getElementById('vtOrahApiKey').value.trim();
+  const region = document.getElementById('vtOrahRegion').value;
+  if (!apiKey) { toast('Enter an Orah API key first'); return; }
+  toast('Testing Orah connection...');
+  try {
+    const res = await fetch('/api/voicenotes/orah-proxy', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + (currentSession?.access_token || SUPABASE_ANON), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ region, api_key: apiKey, endpoint: 'students/list', body: { limit: 1 } })
+    });
+    if (res.ok) toast('Orah connection successful!', true);
+    else toast('Orah connection failed: ' + await res.text());
+  } catch (e) { toast('Orah error: ' + e.message); }
 }
 
 async function clearAllSettings() {
