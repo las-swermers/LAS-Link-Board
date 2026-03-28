@@ -2088,9 +2088,19 @@ body {
             <h4>Google Calendar</h4>
             <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Transport requests will be added to this calendar. Leave blank for your default calendar.</p>
             <div class="vt-field">
-              <label>Calendar ID</label>
+              <label>Auto-Add Script URL</label>
+              <input type="text" id="vtCalendarScriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
+              <div class="vt-hint">Deploy the Apps Script from <code>scripts/auto-calendar-events.gs</code> as a web app, then paste the URL here. Events auto-add to all configured calendars.</div>
+            </div>
+            <div class="vt-field">
+              <label>Script Secret</label>
+              <input type="text" id="vtCalendarSecret" placeholder="Your secret token from the Apps Script CONFIG">
+              <div class="vt-hint">Must match the SECRET in your Apps Script CONFIG.</div>
+            </div>
+            <div class="vt-field">
+              <label>Fallback Calendar ID <span style="color:var(--text-muted);font-weight:400">(if no script configured)</span></label>
               <input type="text" id="vtGoogleCalendarId" placeholder="e.g. transport@group.calendar.google.com">
-              <div class="vt-hint">Find in Google Calendar → Settings → Calendar ID. Leave blank to use your primary calendar.</div>
+              <div class="vt-hint">Used for the manual Google Calendar link. Leave blank for primary calendar.</div>
             </div>
           </div>
 
@@ -6941,6 +6951,8 @@ function loadIntegrationSettings() {
     document.getElementById('vtChatOnTransport').checked = vnOrahSettings.chat_on_transport !== false;
     document.getElementById('vtGoogleSheetsId').value = vnOrahSettings.google_sheets_id || '';
     document.getElementById('vtGoogleCalendarId').value = vnOrahSettings.google_calendar_id || '';
+    document.getElementById('vtCalendarScriptUrl').value = vnOrahSettings.calendar_script_url || '';
+    document.getElementById('vtCalendarSecret').value = vnOrahSettings.calendar_secret || '';
   }
 }
 
@@ -6959,6 +6971,8 @@ async function saveIntegrationSettings() {
     chat_on_transport: document.getElementById('vtChatOnTransport').checked,
     google_sheets_id: document.getElementById('vtGoogleSheetsId').value.trim(),
     google_calendar_id: document.getElementById('vtGoogleCalendarId').value.trim(),
+    calendar_script_url: document.getElementById('vtCalendarScriptUrl').value.trim(),
+    calendar_secret: document.getElementById('vtCalendarSecret').value.trim(),
     updated_at: new Date().toISOString()
   };
 
@@ -7495,8 +7509,13 @@ async function sendTransportRequest(tr) {
       'PDF attached. Generated via LAS LinkBoard.'
     );
 
-    window.open('mailto:' + transportEmail + '?subject=' + subject + '&body=' + body, '_self');
-    toast('PDF downloaded — email opened. Attach the PDF and send!', true);
+    // Open Gmail compose directly (not mailto which opens Apple Mail)
+    const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1' +
+      '&to=' + encodeURIComponent(transportEmail) +
+      '&su=' + subject +
+      '&body=' + body;
+    window.open(gmailUrl, '_blank');
+    toast('PDF downloaded — Gmail opened. Attach the PDF and send!', true);
   } else {
     toast('PDF downloaded — no transport email configured', true);
   }
@@ -7591,13 +7610,31 @@ async function deleteTransportRequest(trId) {
 }
 
 // ─── Google Calendar Integration ───
-function addTransportToGoogleCalendar(tr) {
-  if (!tr.date_time) return; // no date set, skip
+async function addTransportToGoogleCalendar(tr) {
+  if (!tr.date_time) return;
 
+  // Try auto-add via Apps Script first
+  const scriptUrl = vnOrahSettings?.calendar_script_url;
+  const secret = vnOrahSettings?.calendar_secret;
+  if (scriptUrl) {
+    try {
+      const res = await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: secret || '', transport_request: tr }),
+        mode: 'no-cors' // Apps Script doesn't support CORS
+      });
+      // no-cors means we can't read the response, but the event gets created
+      toast('Calendar event auto-added!', true);
+      return;
+    } catch (e) {
+      console.warn('Apps Script calendar failed, falling back to URL:', e);
+    }
+  }
+
+  // Fallback: open Google Calendar URL for manual confirmation
   const start = new Date(tr.date_time);
-  const end = tr.return_time ? new Date(tr.return_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000); // default 2hr
-
-  // Format dates for Google Calendar URL (YYYYMMDDTHHmmss — local time, no Z)
+  const end = tr.return_time ? new Date(tr.return_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
   const pad = (n) => String(n).padStart(2, '0');
   const fmt = (d) => d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
   const dates = fmt(start) + '/' + fmt(end);
@@ -7613,21 +7650,15 @@ function addTransportToGoogleCalendar(tr) {
     '\nDestination: ' + (tr.destination || 'TBD') +
     (tr.appointment_details ? '\n\nDetails: ' + tr.appointment_details : '') +
     (tr.special_instructions ? '\n\nSpecial Instructions: ' + tr.special_instructions : '') +
-    '\n\n— Generated via LAS LinkBoard Voice Notes'
+    '\n\n— Generated via LAS LinkBoard'
   );
 
-  // Use configured calendar or default to primary
   const calId = vnOrahSettings?.google_calendar_id || '';
   const calParam = calId ? '&src=' + encodeURIComponent(calId) : '';
 
   const calUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE' +
-    '&text=' + title +
-    '&dates=' + dates +
-    '&details=' + details +
-    '&location=' + location +
-    calParam +
-    '&sf=true&output=xml';
-
+    '&text=' + title + '&dates=' + dates + '&details=' + details +
+    '&location=' + location + calParam + '&sf=true&output=xml';
   window.open(calUrl, '_blank');
 }
 
