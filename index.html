@@ -1242,6 +1242,13 @@ body {
   text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);
   display: flex; align-items: center; gap: 6px;
 }
+.vn-cat-delete {
+  display: none; border: none; background: none; color: var(--text-muted);
+  cursor: pointer; font-size: 0.85rem; padding: 0 2px; line-height: 1;
+  border-radius: 4px; transition: all 0.15s;
+}
+.vn-cat-column-header:hover .vn-cat-delete { display: block; }
+.vn-cat-delete:hover { color: var(--danger); background: var(--danger-light); }
 .vn-cat-column-count {
   font-size: 0.62rem; font-weight: 700; color: var(--text-muted);
   background: var(--surface); padding: 1px 6px; border-radius: 8px;
@@ -1255,6 +1262,18 @@ body {
   content: 'Drop notes here'; display: block; text-align: center;
   font-size: 0.72rem; color: var(--text-muted); padding: 1.5rem 0; opacity: 0.35;
   border: 1.5px dashed var(--border); border-radius: 8px; margin-top: 0.25rem;
+}
+.vn-inline-add {
+  width: 100%; padding: 0.45rem 0.6rem; border: 1.5px dashed transparent;
+  border-radius: 8px; background: transparent; font-size: 0.78rem;
+  color: var(--text-muted); font-family: inherit; transition: all 0.2s;
+  margin-top: 0.25rem;
+}
+.vn-inline-add:hover { border-color: var(--border); background: var(--surface); }
+.vn-inline-add:focus {
+  outline: none; border-color: var(--gold); background: var(--surface);
+  color: var(--text); border-style: solid;
+  box-shadow: 0 0 0 3px rgba(197,150,59,0.1);
 }
 
 /* Note card */
@@ -2536,51 +2555,56 @@ body {
 
       <!-- Voice Note Detail / Edit Modal -->
       <div class="overlay" id="vnNoteOverlay">
-        <div class="modal" style="max-width:520px">
-          <h3 id="vnNoteTitle">Voice Note</h3>
+        <div class="modal" style="max-width:560px;border-radius:16px;padding:0;overflow:hidden">
+          <!-- Header -->
+          <div style="background:var(--navy);color:#fff;padding:1.25rem 1.5rem">
+            <h3 id="vnNoteTitle" style="font-family:Montserrat,sans-serif;font-size:1.1rem;font-weight:700;margin:0">Voice Note</h3>
+          </div>
           <input type="hidden" id="vnNoteEditId">
-          <div class="field" style="margin-bottom:0.75rem">
-            <label>Title</label>
-            <input type="text" id="vnNoteEditTitle" placeholder="Short summary...">
-          </div>
-          <div class="field" style="margin-bottom:0.75rem">
-            <label>Transcript</label>
-            <textarea id="vnNoteEditTranscript" rows="4" style="font-size:0.85rem;line-height:1.5"></textarea>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
-            <div class="field" style="margin-bottom:0.75rem">
-              <label>Category</label>
-              <select id="vnNoteEditCategory">
-                <!-- Populated by JS -->
-              </select>
+          <div style="padding:1.5rem">
+            <div class="vn-form-group">
+              <label>Title</label>
+              <input type="text" id="vnNoteEditTitle" placeholder="Short summary...">
             </div>
-            <div class="field" style="margin-bottom:0.75rem">
-              <label>Priority</label>
-              <select id="vnNoteEditPriority">
-                <option value="low">Low</option>
-                <option value="normal" selected>Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
+            <div class="vn-form-group">
+              <label>Transcript</label>
+              <textarea id="vnNoteEditTranscript" rows="5" style="font-size:0.88rem;line-height:1.6;font-family:monospace"></textarea>
             </div>
-          </div>
-          <div class="field" style="margin-bottom:0.75rem">
-            <label>Due Date</label>
-            <input type="datetime-local" id="vnNoteEditDue">
-          </div>
-          <div class="field" style="margin-bottom:0.75rem;position:relative">
-            <label>Tagged Student <span style="color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0">— type @ to search Orah</span></label>
-            <input type="text" id="vnNoteEditStudent" placeholder="@student name..." oninput="onNoteStudentInput(this.value)" autocomplete="off">
-            <input type="hidden" id="vnNoteEditStudentId">
-            <div class="vn-student-results" id="vnNoteStudentResults"></div>
-          </div>
-          <div class="modal-foot">
-            <button class="btn btn-outline" onclick="closeModal('vnNoteOverlay')">Cancel</button>
-            <button class="btn btn-crimson btn-sm" onclick="generateTransportFromNote()" style="border-radius:20px">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="1" y="3" width="15" height="13" rx="2" ry="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-              Create Transport Request
-            </button>
-            <button class="btn btn-gold" onclick="saveVnNote()">Save</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+              <div class="vn-form-group">
+                <label>Category</label>
+                <select id="vnNoteEditCategory">
+                  <!-- Populated by JS -->
+                </select>
+              </div>
+              <div class="vn-form-group">
+                <label>Priority</label>
+                <select id="vnNoteEditPriority">
+                  <option value="low">Low</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
+            <div class="vn-form-group">
+              <label>Due Date</label>
+              <input type="datetime-local" id="vnNoteEditDue">
+            </div>
+            <div class="vn-form-group" style="position:relative">
+              <label>Tagged Student <span style="color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0">— type @ to search Orah</span></label>
+              <input type="text" id="vnNoteEditStudent" placeholder="@student name..." oninput="onNoteStudentInput(this.value)" autocomplete="off">
+              <input type="hidden" id="vnNoteEditStudentId">
+              <div class="vn-student-results" id="vnNoteStudentResults"></div>
+            </div>
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+              <button class="btn btn-outline" onclick="closeModal('vnNoteOverlay')">Cancel</button>
+              <button class="btn btn-outline" onclick="generateTransportFromNote()" style="border-radius:8px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="1" y="3" width="15" height="13" rx="2" ry="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                Create Transport Request
+              </button>
+              <button class="btn btn-gold" onclick="saveVnNote()">Save</button>
+            </div>
           </div>
         </div>
       </div>
@@ -6393,9 +6417,17 @@ function renderVnTodos() {
     return '<div class="vn-cat-column" data-cat-id="' + dropCatId + '" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="dropNoteOnCategory(event,\'' + dropCatId + '\');this.classList.remove(\'drag-over\')">' +
       '<div class="vn-cat-column-header">' +
         '<div class="vn-cat-column-title"><span class="cat-dot" style="background:' + group.color + '"></span>' + esc(group.name) + '</div>' +
-        '<span class="vn-cat-column-count">' + group.notes.length + '</span>' +
+        '<div style="display:flex;align-items:center;gap:0.35rem">' +
+          '<span class="vn-cat-column-count">' + group.notes.length + '</span>' +
+          (dropCatId ? '<button class="vn-cat-delete" onclick="deleteCategoryFromColumn(\'' + dropCatId + '\')" title="Delete category">&times;</button>' : '') +
+        '</div>' +
       '</div>' +
-      '<div class="vn-cat-column-body">' + notesHtml + '</div>' +
+      '<div class="vn-cat-column-body">' + notesHtml +
+        '<input type="text" class="vn-inline-add" placeholder="+ Add a note..." ' +
+          'onkeydown="if(event.key===\'Enter\')addInlineNote(this,\'' + dropCatId + '\')" ' +
+          'onfocus="this.placeholder=\'Type and press Enter\'" ' +
+          'onblur="this.placeholder=\'+ Add a note...\'">' +
+      '</div>' +
     '</div>';
   }).join('');
 }
@@ -6431,6 +6463,37 @@ function buildNoteCard(n) {
 
 function toggleNoteExpand(el) {
   el.classList.toggle('expanded');
+}
+
+async function addInlineNote(input, categoryId) {
+  const text = input.value.trim();
+  if (!text) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+  const note = {
+    user_id: currentUser.id,
+    transcript: text,
+    title: text.split(/[.!?\n]/)[0].substring(0, 80),
+    category_id: categoryId || null,
+    priority: 'normal',
+    status: 'pending',
+    due_date: vnSelectedDate ? vnSelectedDate + 'T09:00:00' : null
+  };
+  const res = await fetch(SUPABASE_URL + '/rest/v1/voice_notes', {
+    method: 'POST', headers, body: JSON.stringify(note)
+  });
+  if (res.ok) {
+    const created = await res.json();
+    vnNotes.unshift(created[0] || created);
+    input.value = '';
+    updateVnStats();
+    renderVnTodos();
+    renderVnCategories();
+    if (vnCurrentView === 'month') renderVnMonthGrid();
+    else renderVnCarousel();
+  } else {
+    toast('Failed to add note');
+  }
 }
 
 function endDragNote(event) {
@@ -6487,6 +6550,8 @@ async function toggleVnComplete(noteId) {
 function openVnNote(noteId) {
   const note = vnNotes.find(n => n.id === noteId);
   if (!note) return;
+  // Ensure category dropdown is populated before setting value
+  populateVnCategorySelectors();
   document.getElementById('vnNoteEditId').value = noteId;
   document.getElementById('vnNoteEditTitle').value = note.title || '';
   document.getElementById('vnNoteEditTranscript').value = note.transcript || '';
@@ -6838,6 +6903,23 @@ async function saveCategory() {
   renderVnCategories();
   populateVnCategorySelectors();
   toast(catId ? 'Category updated' : 'Category created', true);
+}
+
+async function deleteCategoryFromColumn(catId) {
+  const cat = vnCategories.find(c => c.id === catId);
+  if (!cat) return;
+  if (!confirm('Delete "' + cat.name + '"? Notes in it will become uncategorized.')) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  await fetch(SUPABASE_URL + '/rest/v1/todo_categories?id=eq.' + catId, {
+    method: 'DELETE', headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token }
+  });
+  vnCategories = vnCategories.filter(c => c.id !== catId);
+  vnNotes.forEach(n => { if (n.category_id === catId) n.category_id = null; });
+  if (vnActiveCategory === catId) vnActiveCategory = null;
+  renderVnCategories();
+  renderVnTodos();
+  populateVnCategorySelectors();
+  toast('Category deleted', true);
 }
 
 async function deleteCategory() {
