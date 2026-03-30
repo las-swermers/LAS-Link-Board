@@ -9,13 +9,7 @@
     { "source": "/api/voicetype/transcribe", "destination": "/api/voicetype/transcribe" },
     { "source": "/api/voicetype/format", "destination": "/api/voicetype/format" },
     { "source": "/api/voicetype/skills", "destination": "/api/voicetype/skills" },
-    { "source": "/api/voicenotes/orah-proxy", "destination": "/api/voicenotes/orah-proxy" },
-    { "source": "/api/voicenotes/send-transport", "destination": "/api/voicenotes/send-transport" },
-    { "source": "/api/voicenotes/google-chat", "destination": "/api/voicenotes/google-chat" },
-    { "source": "/api/voicenotes/chat-bot", "destination": "/api/voicenotes/chat-bot" },
-    { "source": "/api/voicenotes/google-auth", "destination": "/api/voicenotes/google-auth" },
-    { "source": "/api/voicenotes/google-auth-callback", "destination": "/api/voicenotes/google-auth-callback" },
-    { "source": "/api/voicenotes/create-calendar-event", "destination": "/api/voicenotes/create-calendar-event" },
+    { "source": "/api/voicenotes/:action", "destination": "/api/voicenotes/[action]" },
     { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
