@@ -6936,6 +6936,15 @@ async function deleteCategory() {
 }
 
 // ─── Transport Sidebar ───
+// Close sidebar when clicking outside it
+document.addEventListener('click', (e) => {
+  const sidebar = document.getElementById('vnSidebar');
+  if (!sidebar || !sidebar.classList.contains('open')) return;
+  // Don't close if clicking inside the sidebar or on the toggle button
+  if (e.target.closest('.vn-sidebar') || e.target.closest('#vnTransportToggleBtn')) return;
+  toggleTransportSidebar();
+});
+
 function toggleTransportSidebar() {
   const sidebar = document.getElementById('vnSidebar');
   const toggle = document.getElementById('vnSidebarToggle');
