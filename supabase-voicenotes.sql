@@ -157,6 +157,12 @@ CREATE TABLE IF NOT EXISTS orah_settings (
   school_id TEXT DEFAULT '',                   -- school identifier in Orah
   transport_email TEXT DEFAULT '',             -- default email for transport dept
   google_sheets_id TEXT DEFAULT '',            -- Google Sheets ID for transport log
+  google_calendar_id TEXT DEFAULT '',           -- Google Calendar ID for transport events
+  calendar_script_url TEXT DEFAULT '',         -- Apps Script web app URL for auto-adding events
+  calendar_secret TEXT DEFAULT '',             -- Secret token for Apps Script verification
+  google_access_token TEXT DEFAULT '',        -- Google OAuth access token
+  google_refresh_token TEXT DEFAULT '',       -- Google OAuth refresh token
+  google_token_expiry TIMESTAMPTZ,           -- When the access token expires
   google_chat_webhook TEXT DEFAULT '',         -- Google Chat incoming webhook URL
   chat_on_note BOOLEAN DEFAULT true,          -- post to Chat when new voice note created
   chat_on_transport BOOLEAN DEFAULT true,     -- post to Chat when transport request submitted
