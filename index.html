@@ -2555,51 +2555,56 @@ body {
 
       <!-- Voice Note Detail / Edit Modal -->
       <div class="overlay" id="vnNoteOverlay">
-        <div class="modal" style="max-width:520px">
-          <h3 id="vnNoteTitle">Voice Note</h3>
+        <div class="modal" style="max-width:560px;border-radius:16px;padding:0;overflow:hidden">
+          <!-- Header -->
+          <div style="background:var(--navy);color:#fff;padding:1.25rem 1.5rem">
+            <h3 id="vnNoteTitle" style="font-family:Montserrat,sans-serif;font-size:1.1rem;font-weight:700;margin:0">Voice Note</h3>
+          </div>
           <input type="hidden" id="vnNoteEditId">
-          <div class="field" style="margin-bottom:0.75rem">
-            <label>Title</label>
-            <input type="text" id="vnNoteEditTitle" placeholder="Short summary...">
-          </div>
-          <div class="field" style="margin-bottom:0.75rem">
-            <label>Transcript</label>
-            <textarea id="vnNoteEditTranscript" rows="4" style="font-size:0.85rem;line-height:1.5"></textarea>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
-            <div class="field" style="margin-bottom:0.75rem">
-              <label>Category</label>
-              <select id="vnNoteEditCategory">
-                <!-- Populated by JS -->
-              </select>
+          <div style="padding:1.5rem">
+            <div class="vn-form-group">
+              <label>Title</label>
+              <input type="text" id="vnNoteEditTitle" placeholder="Short summary...">
             </div>
-            <div class="field" style="margin-bottom:0.75rem">
-              <label>Priority</label>
-              <select id="vnNoteEditPriority">
-                <option value="low">Low</option>
-                <option value="normal" selected>Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
+            <div class="vn-form-group">
+              <label>Transcript</label>
+              <textarea id="vnNoteEditTranscript" rows="5" style="font-size:0.88rem;line-height:1.6;font-family:monospace"></textarea>
             </div>
-          </div>
-          <div class="field" style="margin-bottom:0.75rem">
-            <label>Due Date</label>
-            <input type="datetime-local" id="vnNoteEditDue">
-          </div>
-          <div class="field" style="margin-bottom:0.75rem;position:relative">
-            <label>Tagged Student <span style="color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0">— type @ to search Orah</span></label>
-            <input type="text" id="vnNoteEditStudent" placeholder="@student name..." oninput="onNoteStudentInput(this.value)" autocomplete="off">
-            <input type="hidden" id="vnNoteEditStudentId">
-            <div class="vn-student-results" id="vnNoteStudentResults"></div>
-          </div>
-          <div class="modal-foot">
-            <button class="btn btn-outline" onclick="closeModal('vnNoteOverlay')">Cancel</button>
-            <button class="btn btn-crimson btn-sm" onclick="generateTransportFromNote()" style="border-radius:20px">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="1" y="3" width="15" height="13" rx="2" ry="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-              Create Transport Request
-            </button>
-            <button class="btn btn-gold" onclick="saveVnNote()">Save</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+              <div class="vn-form-group">
+                <label>Category</label>
+                <select id="vnNoteEditCategory">
+                  <!-- Populated by JS -->
+                </select>
+              </div>
+              <div class="vn-form-group">
+                <label>Priority</label>
+                <select id="vnNoteEditPriority">
+                  <option value="low">Low</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
+            <div class="vn-form-group">
+              <label>Due Date</label>
+              <input type="datetime-local" id="vnNoteEditDue">
+            </div>
+            <div class="vn-form-group" style="position:relative">
+              <label>Tagged Student <span style="color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0">— type @ to search Orah</span></label>
+              <input type="text" id="vnNoteEditStudent" placeholder="@student name..." oninput="onNoteStudentInput(this.value)" autocomplete="off">
+              <input type="hidden" id="vnNoteEditStudentId">
+              <div class="vn-student-results" id="vnNoteStudentResults"></div>
+            </div>
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+              <button class="btn btn-outline" onclick="closeModal('vnNoteOverlay')">Cancel</button>
+              <button class="btn btn-outline" onclick="generateTransportFromNote()" style="border-radius:8px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="1" y="3" width="15" height="13" rx="2" ry="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                Create Transport Request
+              </button>
+              <button class="btn btn-gold" onclick="saveVnNote()">Save</button>
+            </div>
           </div>
         </div>
       </div>
@@ -6545,6 +6550,8 @@ async function toggleVnComplete(noteId) {
 function openVnNote(noteId) {
   const note = vnNotes.find(n => n.id === noteId);
   if (!note) return;
+  // Ensure category dropdown is populated before setting value
+  populateVnCategorySelectors();
   document.getElementById('vnNoteEditId').value = noteId;
   document.getElementById('vnNoteEditTitle').value = note.title || '';
   document.getElementById('vnNoteEditTranscript').value = note.transcript || '';
