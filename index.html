@@ -7485,8 +7485,15 @@ async function submitOrSaveTransport(status) {
       addTransportToGoogleCalendar(record);
       // Create Orah Pass (if connected and student has Orah ID)
       await createOrahPass(record);
-      // Send to Google Chat if configured
-      sendTransportToChat(record);
+      // Send to Google Chat only if transport is for today
+      if (record.date_time) {
+        const transportDate = new Date(record.date_time).toISOString().split('T')[0];
+        const todayDate = new Date().toISOString().split('T')[0];
+        if (transportDate === todayDate) {
+          sendTransportToChat(record);
+        }
+        // Future dates: the daily digest Apps Script will post on the morning of
+      }
       // Create a to-do item for this transport request
       await createTodoFromTransport(record);
       toast('Transport request submitted!', true);
