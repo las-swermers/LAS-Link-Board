@@ -2240,23 +2240,15 @@ body {
       <div class="vn-layout">
         <div class="vn-main" id="vnMain">
 
-          <!-- Top Bar: Quick-Add + Stats + Orah -->
+          <!-- Top Bar: Organize + Stats + Orah -->
           <div style="display:flex;gap:0.75rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap">
-            <!-- Quick-Add Input -->
-            <div style="flex:1;min-width:250px;display:flex;gap:0.5rem;align-items:stretch">
-              <input type="text" id="vnQuickNote" placeholder="Add a note... (@student, #category)"
-                style="flex:1;padding:0.6rem 1rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.85rem;background:var(--surface);transition:border-color 0.2s"
-                onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"
-                onkeydown="if(event.key==='Enter')addQuickNote()">
-              <select id="vnQuickCategory" style="padding:0.4rem 0.6rem;border:1.5px solid var(--border);border-radius:10px;font-size:0.75rem;background:var(--surface);min-width:90px">
-                <option value="">Category</option>
-              </select>
-              <button class="btn btn-gold" onclick="addQuickNote()" style="border-radius:10px;padding:0.4rem 1rem;font-size:0.78rem;white-space:nowrap">+ Add</button>
-              <button class="btn btn-outline" onclick="smartOrganize()" id="vnSmartOrganizeBtn" style="border-radius:10px;padding:0.4rem 0.75rem;font-size:0.72rem;white-space:nowrap" title="AI: reorganize and prioritize all notes">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:3px"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                Organize
-              </button>
-            </div>
+            <button class="btn btn-outline" onclick="smartOrganize()" id="vnSmartOrganizeBtn" style="border-radius:10px;padding:0.4rem 0.75rem;font-size:0.72rem;white-space:nowrap" title="AI: reorganize and prioritize all notes">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:3px"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              Organize
+            </button>
+            <!-- Hidden elements for backwards compat -->
+            <input type="hidden" id="vnQuickNote">
+            <select id="vnQuickCategory" style="display:none"><option value="">Category</option></select>
             <!-- Compact Stats -->
             <div style="display:flex;gap:0.75rem;align-items:center;font-size:0.75rem;color:var(--text-muted);flex-shrink:0">
               <span><strong id="vnStatTotal" style="color:var(--navy)">0</strong> notes</span>
