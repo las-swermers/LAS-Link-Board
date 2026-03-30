@@ -2292,7 +2292,7 @@ body {
               <!-- Populated by JS -->
             </select>
             <button class="btn btn-outline" onclick="openCategoryEditor()" style="padding:0.25rem 0.5rem;font-size:0.68rem;border-radius:8px">+ Category</button>
-            <button class="btn btn-gold btn-sm" onclick="toggleTransportSidebar()" style="padding:0.25rem 0.65rem;font-size:0.68rem;border-radius:8px">
+            <button class="btn btn-gold btn-sm" id="vnTransportToggleBtn" onclick="toggleTransportSidebar()" style="padding:0.25rem 0.65rem;font-size:0.68rem;border-radius:8px">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
               Transport
             </button>
@@ -6940,9 +6940,19 @@ function toggleTransportSidebar() {
   const sidebar = document.getElementById('vnSidebar');
   const toggle = document.getElementById('vnSidebarToggle');
   const main = document.getElementById('vnMain');
+  const btn = document.getElementById('vnTransportToggleBtn');
   sidebar.classList.toggle('open');
   toggle.classList.toggle('active');
   main.classList.toggle('sidebar-open');
+  // Update button text
+  const isOpen = sidebar.classList.contains('open');
+  if (btn) {
+    btn.innerHTML = isOpen
+      ? '&times; Close'
+      : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:3px"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Transport';
+    btn.className = isOpen ? 'btn btn-outline btn-sm' : 'btn btn-gold btn-sm';
+    btn.style.cssText = 'padding:0.25rem 0.65rem;font-size:0.68rem;border-radius:8px';
+  }
 }
 
 function switchTransportTab(panel) {
