@@ -1242,6 +1242,13 @@ body {
   text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);
   display: flex; align-items: center; gap: 6px;
 }
+.vn-cat-delete {
+  display: none; border: none; background: none; color: var(--text-muted);
+  cursor: pointer; font-size: 0.85rem; padding: 0 2px; line-height: 1;
+  border-radius: 4px; transition: all 0.15s;
+}
+.vn-cat-column-header:hover .vn-cat-delete { display: block; }
+.vn-cat-delete:hover { color: var(--danger); background: var(--danger-light); }
 .vn-cat-column-count {
   font-size: 0.62rem; font-weight: 700; color: var(--text-muted);
   background: var(--surface); padding: 1px 6px; border-radius: 8px;
@@ -1255,6 +1262,18 @@ body {
   content: 'Drop notes here'; display: block; text-align: center;
   font-size: 0.72rem; color: var(--text-muted); padding: 1.5rem 0; opacity: 0.35;
   border: 1.5px dashed var(--border); border-radius: 8px; margin-top: 0.25rem;
+}
+.vn-inline-add {
+  width: 100%; padding: 0.45rem 0.6rem; border: 1.5px dashed transparent;
+  border-radius: 8px; background: transparent; font-size: 0.78rem;
+  color: var(--text-muted); font-family: inherit; transition: all 0.2s;
+  margin-top: 0.25rem;
+}
+.vn-inline-add:hover { border-color: var(--border); background: var(--surface); }
+.vn-inline-add:focus {
+  outline: none; border-color: var(--gold); background: var(--surface);
+  color: var(--text); border-style: solid;
+  box-shadow: 0 0 0 3px rgba(197,150,59,0.1);
 }
 
 /* Note card */
@@ -6393,9 +6412,17 @@ function renderVnTodos() {
     return '<div class="vn-cat-column" data-cat-id="' + dropCatId + '" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="dropNoteOnCategory(event,\'' + dropCatId + '\');this.classList.remove(\'drag-over\')">' +
       '<div class="vn-cat-column-header">' +
         '<div class="vn-cat-column-title"><span class="cat-dot" style="background:' + group.color + '"></span>' + esc(group.name) + '</div>' +
-        '<span class="vn-cat-column-count">' + group.notes.length + '</span>' +
+        '<div style="display:flex;align-items:center;gap:0.35rem">' +
+          '<span class="vn-cat-column-count">' + group.notes.length + '</span>' +
+          (dropCatId ? '<button class="vn-cat-delete" onclick="deleteCategoryFromColumn(\'' + dropCatId + '\')" title="Delete category">&times;</button>' : '') +
+        '</div>' +
       '</div>' +
-      '<div class="vn-cat-column-body">' + notesHtml + '</div>' +
+      '<div class="vn-cat-column-body">' + notesHtml +
+        '<input type="text" class="vn-inline-add" placeholder="+ Add a note..." ' +
+          'onkeydown="if(event.key===\'Enter\')addInlineNote(this,\'' + dropCatId + '\')" ' +
+          'onfocus="this.placeholder=\'Type and press Enter\'" ' +
+          'onblur="this.placeholder=\'+ Add a note...\'">' +
+      '</div>' +
     '</div>';
   }).join('');
 }
@@ -6431,6 +6458,37 @@ function buildNoteCard(n) {
 
 function toggleNoteExpand(el) {
   el.classList.toggle('expanded');
+}
+
+async function addInlineNote(input, categoryId) {
+  const text = input.value.trim();
+  if (!text) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+  const note = {
+    user_id: currentUser.id,
+    transcript: text,
+    title: text.split(/[.!?\n]/)[0].substring(0, 80),
+    category_id: categoryId || null,
+    priority: 'normal',
+    status: 'pending',
+    due_date: vnSelectedDate ? vnSelectedDate + 'T09:00:00' : null
+  };
+  const res = await fetch(SUPABASE_URL + '/rest/v1/voice_notes', {
+    method: 'POST', headers, body: JSON.stringify(note)
+  });
+  if (res.ok) {
+    const created = await res.json();
+    vnNotes.unshift(created[0] || created);
+    input.value = '';
+    updateVnStats();
+    renderVnTodos();
+    renderVnCategories();
+    if (vnCurrentView === 'month') renderVnMonthGrid();
+    else renderVnCarousel();
+  } else {
+    toast('Failed to add note');
+  }
 }
 
 function endDragNote(event) {
@@ -6838,6 +6896,23 @@ async function saveCategory() {
   renderVnCategories();
   populateVnCategorySelectors();
   toast(catId ? 'Category updated' : 'Category created', true);
+}
+
+async function deleteCategoryFromColumn(catId) {
+  const cat = vnCategories.find(c => c.id === catId);
+  if (!cat) return;
+  if (!confirm('Delete "' + cat.name + '"? Notes in it will become uncategorized.')) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  await fetch(SUPABASE_URL + '/rest/v1/todo_categories?id=eq.' + catId, {
+    method: 'DELETE', headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token }
+  });
+  vnCategories = vnCategories.filter(c => c.id !== catId);
+  vnNotes.forEach(n => { if (n.category_id === catId) n.category_id = null; });
+  if (vnActiveCategory === catId) vnActiveCategory = null;
+  renderVnCategories();
+  renderVnTodos();
+  populateVnCategorySelectors();
+  toast('Category deleted', true);
 }
 
 async function deleteCategory() {
