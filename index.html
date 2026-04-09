@@ -2006,6 +2006,36 @@ body {
             </div>
           </div>
 
+          <div class="vt-card" id="vtOrahKeyCard">
+            <h4>Orah API Key</h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Required for student lookup, @tagging, and automatic pass creation.</p>
+            <div class="vt-field">
+              <label>Region</label>
+              <select id="vtOrahRegionMain">
+                <option value="https://open-api-ireland.orah.com/open-api">Europe / Middle East / Africa</option>
+                <option value="https://open-api-virginia.orah.com/open-api">Americas</option>
+                <option value="https://open-api-sydney.orah.com/open-api">Asia-Pacific</option>
+              </select>
+              <div class="vt-hint">Select the region matching your Orah instance</div>
+            </div>
+            <div class="vt-field">
+              <label>API Key</label>
+              <div class="vt-api-key-wrap">
+                <input type="password" id="vtOrahApiKeyMain" placeholder="Enter Orah API key..." autocomplete="off">
+                <button class="btn btn-soft btn-sm" onclick="toggleVtOrahKeyMainVisibility()" id="vtOrahKeyMainToggle">Show</button>
+                <button class="btn btn-danger-ghost btn-sm" onclick="deleteVtOrahKey()" title="Remove Orah API key">Delete</button>
+              </div>
+              <div class="vt-hint">Generate in Orah Admin Console → Settings → Open API</div>
+            </div>
+            <div class="vt-field">
+              <label>School Name / ID</label>
+              <input type="text" id="vtOrahSchoolIdMain" placeholder="e.g. LAS">
+            </div>
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
+              <button class="btn btn-outline btn-sm" onclick="testOrahConnectionFromApiKeys()">Test Connection</button>
+            </div>
+          </div>
+
           <div class="vt-card">
             <h4>Desktop App Preferences</h4>
             <div class="vt-field">
@@ -2054,28 +2084,7 @@ body {
         <div class="vt-panel" id="vtPanelIntegrations">
           <div class="vt-card">
             <h4>Orah Integration</h4>
-            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Connect to Orah for student lookup, @tagging, and automatic pass creation.</p>
-            <div class="vt-field">
-              <label>Region</label>
-              <select id="vtOrahRegion">
-                <option value="https://open-api-ireland.orah.com/open-api">Europe / Middle East / Africa</option>
-                <option value="https://open-api-virginia.orah.com/open-api">Americas</option>
-                <option value="https://open-api-sydney.orah.com/open-api">Asia-Pacific</option>
-              </select>
-            </div>
-            <div class="vt-field">
-              <label>API Key</label>
-              <div class="vt-api-key-wrap">
-                <input type="password" id="vtOrahApiKey" placeholder="Enter Orah API key..." autocomplete="off">
-                <button class="btn btn-soft btn-sm" onclick="toggleVtOrahKeyVisibility()" id="vtOrahKeyToggle">Show</button>
-                <button class="btn btn-danger-ghost btn-sm" onclick="document.getElementById('vtOrahApiKey').value=''" title="Clear">Delete</button>
-              </div>
-              <div class="vt-hint">Generate in Orah Admin Console → Settings → Open API</div>
-            </div>
-            <div class="vt-field">
-              <label>School Name / ID</label>
-              <input type="text" id="vtOrahSchoolId" placeholder="e.g. LAS">
-            </div>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Orah API key, region, and school ID are managed in the <a href="#" onclick="switchVtTab('settings');return false" style="color:var(--gold);font-weight:600">API Keys</a> tab.</p>
           </div>
 
           <div class="vt-card">
@@ -2133,7 +2142,7 @@ body {
           </div>
 
           <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
-            <button class="btn btn-outline btn-sm" onclick="testOrahConnectionFromSettings()">Test Orah</button>
+            <button class="btn btn-outline btn-sm" onclick="testOrahConnectionFromApiKeys()">Test Orah</button>
             <button class="btn btn-gold" onclick="saveIntegrationSettings()">Save Integrations</button>
           </div>
         </div>
@@ -2426,17 +2435,10 @@ body {
             <!-- ═══ Saved State Card (read-only) ═══ -->
             <div id="vnSettingsSaved" style="display:none">
               <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1rem">
-                <!-- Orah Section -->
-                <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem">
-                    <span style="font-family:Montserrat,sans-serif;font-size:0.78rem;font-weight:700;color:var(--navy)">Orah Integration</span>
-                    <span id="vnSettingsOrahBadge" class="vn-aura-badge" style="font-size:0.65rem;padding:0.2rem 0.5rem"><span class="aura-dot"></span> Not connected</span>
-                  </div>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem 1rem;font-size:0.78rem">
-                    <div><span style="color:var(--text-muted)">Region:</span> <span id="vnSavedRegion">—</span></div>
-                    <div><span style="color:var(--text-muted)">API Key:</span> <span id="vnSavedApiKey">—</span></div>
-                    <div><span style="color:var(--text-muted)">School:</span> <span id="vnSavedSchool">—</span></div>
-                  </div>
+                <!-- Orah Status -->
+                <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                  <span style="font-family:Montserrat,sans-serif;font-size:0.78rem;font-weight:700;color:var(--navy)">Orah Integration</span>
+                  <span id="vnSettingsOrahBadge" class="vn-aura-badge" style="font-size:0.65rem;padding:0.2rem 0.5rem"><span class="aura-dot"></span> Not connected</span>
                 </div>
                 <!-- Transport Section -->
                 <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
@@ -2457,32 +2459,12 @@ body {
               </div>
               <div style="display:flex;gap:0.5rem;justify-content:flex-end">
                 <button class="btn btn-danger-ghost btn-sm" onclick="clearAllSettings()" style="margin-right:auto">Clear All Settings</button>
-                <button class="btn btn-outline btn-sm" onclick="testOrahConnection()">Test Orah</button>
                 <button class="btn btn-gold btn-sm" onclick="showSettingsEditMode()">Edit Settings</button>
               </div>
             </div>
 
             <!-- ═══ Edit Mode Form ═══ -->
             <div id="vnSettingsEdit">
-              <div class="vn-form-group">
-                <label>Orah Region</label>
-                <select id="orahRegion">
-                  <option value="https://open-api-ireland.orah.com/open-api">Europe / Middle East / Africa</option>
-                  <option value="https://open-api-virginia.orah.com/open-api">Americas</option>
-                  <option value="https://open-api-sydney.orah.com/open-api">Asia-Pacific</option>
-                </select>
-                <div class="vn-form-hint">Select the region matching your Orah instance</div>
-              </div>
-              <div class="vn-form-group">
-                <label>Orah API Key</label>
-                <input type="password" id="orahApiKey" placeholder="Enter API key...">
-                <div class="vn-form-hint">Generate in Orah Admin Console. Contact your CSM if Open API isn't enabled.</div>
-              </div>
-              <div class="vn-form-group">
-                <label>School Name / ID</label>
-                <input type="text" id="orahSchoolId" placeholder="e.g. LAS">
-              </div>
-              <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0">
               <div class="vn-form-group">
                 <label>Transport Department Email</label>
                 <input type="email" id="trTransportEmail" placeholder="transport@school.edu">
@@ -2510,7 +2492,6 @@ body {
               </div>
               <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
                 <button class="btn btn-outline btn-sm" onclick="cancelSettingsEdit()">Cancel</button>
-                <button class="btn btn-outline btn-sm" onclick="testOrahConnection()">Test Orah</button>
                 <button class="btn btn-gold" onclick="saveOrahSettings()">Save Settings</button>
               </div>
             </div>
@@ -5070,6 +5051,17 @@ async function loadVtSettings() {
   }
   onVtModeChange();
 
+  // Populate Orah fields in API Keys tab from orah_settings
+  if (vnOrahSettings) {
+    document.getElementById('vtOrahRegionMain').value = vnOrahSettings.orah_region || 'https://open-api-ireland.orah.com/open-api';
+    document.getElementById('vtOrahApiKeyMain').value = vnOrahSettings.orah_api_key || '';
+    document.getElementById('vtOrahSchoolIdMain').value = vnOrahSettings.school_id || '';
+  } else {
+    document.getElementById('vtOrahRegionMain').value = 'https://open-api-ireland.orah.com/open-api';
+    document.getElementById('vtOrahApiKeyMain').value = '';
+    document.getElementById('vtOrahSchoolIdMain').value = '';
+  }
+
   // Load skills
   loadVtSkills();
 
@@ -5241,6 +5233,67 @@ function toggleVtAnthropicKeyVisibility() {
   else { inp.type = 'password'; btn.textContent = 'Show'; }
 }
 
+function toggleVtOrahKeyMainVisibility() {
+  const inp = document.getElementById('vtOrahApiKeyMain');
+  const btn = document.getElementById('vtOrahKeyMainToggle');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Hide'; }
+  else { inp.type = 'password'; btn.textContent = 'Show'; }
+}
+
+async function deleteVtOrahKey() {
+  if (!confirm('Remove your Orah API key? Student lookup and pass creation will stop working until you add a new one.')) return;
+  document.getElementById('vtOrahApiKeyMain').value = '';
+  document.getElementById('vtOrahSchoolIdMain').value = '';
+  await saveOrahKeyFromApiTab();
+  updateVnOrahBadge();
+  toast('Orah API key removed', true);
+}
+
+async function saveOrahKeyFromApiTab() {
+  if (!currentUser) return;
+  const token = currentSession?.access_token || SUPABASE_ANON;
+  const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+  const orahData = {
+    user_id: currentUser.id,
+    orah_region: document.getElementById('vtOrahRegionMain').value,
+    orah_api_key: document.getElementById('vtOrahApiKeyMain').value.trim(),
+    school_id: document.getElementById('vtOrahSchoolIdMain').value.trim(),
+    updated_at: new Date().toISOString()
+  };
+
+  if (vnOrahSettings && vnOrahSettings.id) {
+    await fetch(SUPABASE_URL + '/rest/v1/orah_settings?id=eq.' + vnOrahSettings.id, {
+      method: 'PATCH', headers, body: JSON.stringify(orahData)
+    });
+    Object.assign(vnOrahSettings, orahData);
+  } else {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/orah_settings', {
+      method: 'POST', headers, body: JSON.stringify(orahData)
+    });
+    if (res.ok) {
+      const created = await res.json();
+      vnOrahSettings = created[0] || created;
+    }
+  }
+  updateVnOrahBadge();
+}
+
+async function testOrahConnectionFromApiKeys() {
+  const apiKey = document.getElementById('vtOrahApiKeyMain').value.trim();
+  const region = document.getElementById('vtOrahRegionMain').value;
+  if (!apiKey) { toast('Enter an Orah API key first'); return; }
+  toast('Testing Orah connection...');
+  try {
+    const res = await fetch('/api/voicenotes/orah-proxy', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + (currentSession?.access_token || SUPABASE_ANON), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ region, api_key: apiKey, endpoint: 'students/list', body: { limit: 1 } })
+    });
+    if (res.ok) toast('Orah connection successful!', true);
+    else toast('Orah connection failed: ' + await res.text());
+  } catch (e) { toast('Orah error: ' + e.message); }
+}
+
 function onVtModeChange() {
   const mode = document.getElementById('vtTranscriptionMode').value;
   const apiKeyCard = document.getElementById('vtApiKeyCard');
@@ -5288,6 +5341,8 @@ async function saveVtSettings() {
       body: JSON.stringify(payload)
     });
     if (res.ok) {
+      // Also save Orah settings to orah_settings table
+      await saveOrahKeyFromApiTab();
       toast('VoiceType settings saved!', true);
       loadVtSettings();
     } else {
@@ -6984,9 +7039,6 @@ function openOrahSettings() {
 
 function loadOrahSettingsForm() {
   if (vnOrahSettings) {
-    document.getElementById('orahRegion').value = vnOrahSettings.orah_region || 'https://open-api-ireland.orah.com/open-api';
-    document.getElementById('orahApiKey').value = vnOrahSettings.orah_api_key || '';
-    document.getElementById('orahSchoolId').value = vnOrahSettings.school_id || '';
     document.getElementById('trTransportEmail').value = vnOrahSettings.transport_email || '';
     document.getElementById('trGoogleSheetsId').value = vnOrahSettings.google_sheets_id || '';
     document.getElementById('trGoogleChatWebhook').value = vnOrahSettings.google_chat_webhook || '';
@@ -7002,15 +7054,6 @@ function loadOrahSettingsForm() {
 
 function renderSettingsSavedCard() {
   const s = vnOrahSettings || {};
-  // Orah
-  const regionMap = {
-    'https://open-api-ireland.orah.com/open-api': 'Europe',
-    'https://open-api-virginia.orah.com/open-api': 'Americas',
-    'https://open-api-sydney.orah.com/open-api': 'Asia-Pacific'
-  };
-  document.getElementById('vnSavedRegion').textContent = regionMap[s.orah_region] || 'Not set';
-  document.getElementById('vnSavedApiKey').textContent = s.orah_api_key ? '••••••' + s.orah_api_key.slice(-4) : 'Not set';
-  document.getElementById('vnSavedSchool').textContent = s.school_id || 'Not set';
   // Orah badge
   const badge = document.getElementById('vnSettingsOrahBadge');
   if (s.orah_api_key) {
@@ -7039,9 +7082,6 @@ function showSettingsEditMode() {
 // ─── Settings Tab Integrations Panel ───
 function loadIntegrationSettings() {
   if (vnOrahSettings) {
-    document.getElementById('vtOrahRegion').value = vnOrahSettings.orah_region || 'https://open-api-ireland.orah.com/open-api';
-    document.getElementById('vtOrahApiKey').value = vnOrahSettings.orah_api_key || '';
-    document.getElementById('vtOrahSchoolId').value = vnOrahSettings.school_id || '';
     document.getElementById('vtTransportEmail').value = vnOrahSettings.transport_email || '';
     document.getElementById('vtGoogleChatWebhook').value = vnOrahSettings.google_chat_webhook || '';
     document.getElementById('vtChatOnNote').checked = vnOrahSettings.chat_on_note !== false;
@@ -7059,9 +7099,6 @@ async function saveIntegrationSettings() {
   const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
   const data = {
     user_id: currentUser.id,
-    orah_region: document.getElementById('vtOrahRegion').value,
-    orah_api_key: document.getElementById('vtOrahApiKey').value.trim(),
-    school_id: document.getElementById('vtOrahSchoolId').value.trim(),
     transport_email: document.getElementById('vtTransportEmail').value.trim(),
     google_chat_webhook: document.getElementById('vtGoogleChatWebhook').value.trim(),
     chat_on_note: document.getElementById('vtChatOnNote').checked,
@@ -7087,29 +7124,6 @@ async function saveIntegrationSettings() {
   }
   updateVnOrahBadge();
   toast('Integration settings saved!', true);
-}
-
-function toggleVtOrahKeyVisibility() {
-  const inp = document.getElementById('vtOrahApiKey');
-  const btn = document.getElementById('vtOrahKeyToggle');
-  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Hide'; }
-  else { inp.type = 'password'; btn.textContent = 'Show'; }
-}
-
-async function testOrahConnectionFromSettings() {
-  const apiKey = document.getElementById('vtOrahApiKey').value.trim();
-  const region = document.getElementById('vtOrahRegion').value;
-  if (!apiKey) { toast('Enter an Orah API key first'); return; }
-  toast('Testing Orah connection...');
-  try {
-    const res = await fetch('/api/voicenotes/orah-proxy', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + (currentSession?.access_token || SUPABASE_ANON), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ region, api_key: apiKey, endpoint: 'students/list', body: { limit: 1 } })
-    });
-    if (res.ok) toast('Orah connection successful!', true);
-    else toast('Orah connection failed: ' + await res.text());
-  } catch (e) { toast('Orah error: ' + e.message); }
 }
 
 // ─── Google Calendar OAuth ───
@@ -7167,23 +7181,28 @@ function updateGcalStatus() {
 }
 
 async function clearAllSettings() {
-  if (!confirm('Clear all settings? This will remove your Orah API key, transport email, Google Chat webhook, and Google Sheets ID. This cannot be undone.')) return;
+  if (!confirm('Clear all settings? This will remove your transport email, Google Chat webhook, and Google Sheets ID. This cannot be undone. (Orah API key is managed in the API Keys tab.)')) return;
   if (!vnOrahSettings || !vnOrahSettings.id) { toast('No settings to clear'); return; }
 
   const token = currentSession?.access_token || SUPABASE_ANON;
+  // Preserve Orah API key fields, only clear transport/chat settings
   await fetch(SUPABASE_URL + '/rest/v1/orah_settings?id=eq.' + vnOrahSettings.id, {
-    method: 'DELETE',
-    headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token }
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transport_email: '', google_sheets_id: '', google_chat_webhook: '', chat_on_note: true, chat_on_transport: true })
   });
 
-  vnOrahSettings = null;
+  vnOrahSettings.transport_email = '';
+  vnOrahSettings.google_sheets_id = '';
+  vnOrahSettings.google_chat_webhook = '';
+  vnOrahSettings.chat_on_note = true;
+  vnOrahSettings.chat_on_transport = true;
 
   // Clear form fields
-  ['orahApiKey', 'orahSchoolId', 'trTransportEmail', 'trGoogleSheetsId', 'trGoogleChatWebhook'].forEach(id => {
+  ['trTransportEmail', 'trGoogleSheetsId', 'trGoogleChatWebhook'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  document.getElementById('orahRegion').value = 'https://open-api-ireland.orah.com/open-api';
   document.getElementById('trChatOnNote').checked = true;
   document.getElementById('trChatOnTransport').checked = true;
 
@@ -7205,9 +7224,6 @@ async function saveOrahSettings() {
   const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
   const data = {
     user_id: currentUser.id,
-    orah_region: document.getElementById('orahRegion').value,
-    orah_api_key: document.getElementById('orahApiKey').value.trim(),
-    school_id: document.getElementById('orahSchoolId').value.trim(),
     transport_email: document.getElementById('trTransportEmail').value.trim(),
     google_sheets_id: document.getElementById('trGoogleSheetsId').value.trim(),
     google_chat_webhook: document.getElementById('trGoogleChatWebhook').value.trim(),
@@ -7239,8 +7255,8 @@ async function saveOrahSettings() {
 }
 
 async function testOrahConnection() {
-  if (!vnOrahSettings || !document.getElementById('orahApiKey').value.trim()) {
-    toast('Enter an Orah API key first');
+  if (!vnOrahSettings || !vnOrahSettings.orah_api_key) {
+    toast('Add an Orah API key in the API Keys tab first');
     return;
   }
   toast('Testing Orah connection...');
@@ -7249,8 +7265,8 @@ async function testOrahConnection() {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + (currentSession?.access_token || SUPABASE_ANON), 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        region: document.getElementById('orahRegion').value,
-        api_key: document.getElementById('orahApiKey').value.trim(),
+        region: vnOrahSettings.orah_region || 'https://open-api-ireland.orah.com/open-api',
+        api_key: vnOrahSettings.orah_api_key,
         endpoint: 'students/list',
         body: { limit: 1 }
       })
