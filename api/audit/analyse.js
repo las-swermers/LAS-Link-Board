@@ -23,10 +23,14 @@
 //
 // Finding shape: { title, detail, module, metric }
 //   module: 'students'|'pastoral'|'leave'|'location'|'rolls'|'api'
+//
+// Auth: Uses the user's own Anthropic API key from
+// voicetype_settings (same as all other AI features).
+
+const { decrypt } = require('../voicetype/crypto');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://pmhoeqxuamvqlwsatozu.supabase.co';
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
 
 function buildPrompt(stats, score, school) {
   const s = stats;
@@ -127,23 +131,50 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Auth — verify Supabase session
+  // Auth — verify Supabase session and get user ID
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing Authorization header' });
   }
   const token = auth.replace('Bearer ', '');
+  let user;
   try {
     const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', {
       headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + token }
     });
     if (!userRes.ok) return res.status(401).json({ error: 'Invalid session' });
+    user = await userRes.json();
   } catch {
     return res.status(401).json({ error: 'Auth check failed' });
   }
+  if (!user || !user.id) return res.status(401).json({ error: 'Unauthorized' });
 
-  if (!ANTHROPIC_KEY) {
-    return res.status(500).json({ error: 'Anthropic API key not configured on server' });
+  // Fetch user's Anthropic API key from voicetype_settings (same as all AI features)
+  const apiHeaders = {
+    'apikey': SERVICE_KEY,
+    'Authorization': 'Bearer ' + SERVICE_KEY,
+    'Content-Type': 'application/json'
+  };
+  let anthropicKey = '';
+  let anthropicBaseUrl = '';
+  try {
+    const r = await fetch(
+      SUPABASE_URL + '/rest/v1/voicetype_settings?user_id=eq.' + user.id + '&select=anthropic_api_key,anthropic_base_url&limit=1',
+      { headers: apiHeaders }
+    );
+    if (r.ok) {
+      const rows = await r.json();
+      if (rows.length > 0) {
+        anthropicKey = decrypt(rows[0].anthropic_api_key || '');
+        anthropicBaseUrl = rows[0].anthropic_base_url || '';
+      }
+    }
+  } catch {
+    // will fail below if key is missing
+  }
+
+  if (!anthropicKey) {
+    return res.status(400).json({ error: 'No Anthropic API key found. Add one in Settings → VoiceType to use the audit tool.' });
   }
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
@@ -156,10 +187,11 @@ module.exports = async (req, res) => {
   const prompt = buildPrompt(stats, score, school || 'LAS');
 
   try {
-    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+    const claudeUrl = (anthropicBaseUrl || 'https://api.anthropic.com') + '/v1/messages';
+    const claudeRes = await fetch(claudeUrl, {
       method: 'POST',
       headers: {
-        'x-api-key': ANTHROPIC_KEY,
+        'x-api-key': anthropicKey,
         'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json'
       },
