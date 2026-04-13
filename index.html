@@ -6495,19 +6495,21 @@ function renderVnTodos() {
     const dropCatId = catId === '__uncategorized__' ? '' : catId;
     const notesHtml   = group.notes.map(n => buildNoteCard(n)).join('');
     const isDraggable = !!dropCatId;
-    return '<div class="vn-cat-column" data-cat-id="' + dropCatId + '" ondragover="vnColDragOver(event,this)" ondragleave="vnColDragLeave(this)" ondrop="vnColDrop(event,\'' + dropCatId + '\',this)">' +
-      '<div class="vn-cat-column-header"' +
+    const rgb = hexToRgb(group.color);
+    const headerStyle = 'background:' + group.color + ';border-radius:12px 12px 0 0;';
+    const bodyStyle   = 'background:rgba(' + rgb + ',0.06);';
+    return '<div class="vn-cat-column" data-cat-id="' + dropCatId + '" style="' + bodyStyle + '" ondragover="vnColDragOver(event,this)" ondragleave="vnColDragLeave(this)" ondrop="vnColDrop(event,\'' + dropCatId + '\',this)">' +
+      '<div class="vn-cat-column-header" style="' + headerStyle + '"' +
         (isDraggable ? ' draggable="true" ondragstart="startDragColumn(event,\'' + dropCatId + '\')" ondragend="endDragColumn()"' : '') + '>' +
-        '<div class="vn-cat-column-title">' +
-          (isDraggable ? '<span class="vn-col-drag-handle" title="Drag to reorder">⠿</span>' : '') +
-          '<span class="cat-dot" style="background:' + group.color + '"></span>' +
+        '<div class="vn-cat-column-title" style="color:rgba(255,255,255,0.95)">' +
+          (isDraggable ? '<span class="vn-col-drag-handle" style="color:rgba(255,255,255,0.7)" title="Drag to reorder">⠿</span>' : '') +
           (isDraggable
             ? '<span class="vn-cat-name" ondblclick="startRenameCategory(this,\'' + dropCatId + '\')" title="Double-click to rename">' + esc(group.name) + '</span>'
             : esc(group.name)) +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:0.35rem">' +
-          '<span class="vn-cat-column-count">' + group.notes.length + '</span>' +
-          (isDraggable ? '<button class="vn-cat-delete" onclick="deleteCategoryFromColumn(\'' + dropCatId + '\')" title="Delete category">&times;</button>' : '') +
+          '<span class="vn-cat-column-count" style="background:rgba(255,255,255,0.2);color:rgba(255,255,255,0.9)">' + group.notes.length + '</span>' +
+          (isDraggable ? '<button class="vn-cat-delete" style="color:rgba(255,255,255,0.7)" onclick="deleteCategoryFromColumn(\'' + dropCatId + '\')" title="Delete category">&times;</button>' : '') +
         '</div>' +
       '</div>' +
       '<div class="vn-cat-column-body">' + notesHtml +
@@ -6760,6 +6762,12 @@ function initVnCarousel() {
 
 function toDateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function hexToRgb(hex) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  return parseInt(hex.slice(0,2),16)+','+parseInt(hex.slice(2,4),16)+','+parseInt(hex.slice(4,6),16);
 }
 
 function shiftVnCarousel(days) {
@@ -7136,6 +7144,7 @@ async function saveCategory() {
   }
   closeModal('vnCategoryOverlay');
   renderVnCategories();
+  renderVnTodos();
   populateVnCategorySelectors();
   toast(catId ? 'Category updated' : 'Category created', true);
 }
