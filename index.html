@@ -6442,11 +6442,6 @@ function renderVnTodos() {
     filtered = filtered.filter(n => n.status === statusFilter);
   }
 
-  if (filtered.length === 0) {
-    list.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
   empty.style.display = 'none';
 
   // Group by category — show ALL columns so you can drag into empty ones
