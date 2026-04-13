@@ -1242,6 +1242,14 @@ body {
 }
 .vn-cat-column-header:hover .vn-col-drag-handle { opacity: 1; }
 .vn-col-drag-handle:active { cursor: grabbing; }
+.vn-cat-name { cursor: text; border-radius: 3px; }
+.vn-cat-name:hover { opacity: 0.7; }
+.vn-cat-rename-input {
+  font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);
+  background: transparent; border: none; border-bottom: 1.5px solid var(--accent);
+  outline: none; width: 7rem; padding: 0;
+}
 .vn-cat-column-header {
   padding: 0.75rem 0.85rem 0.5rem; display: flex; align-items: center; justify-content: space-between;
 }
@@ -6474,7 +6482,10 @@ function renderVnTodos() {
         (isDraggable ? ' draggable="true" ondragstart="startDragColumn(event,\'' + dropCatId + '\')" ondragend="endDragColumn()"' : '') + '>' +
         '<div class="vn-cat-column-title">' +
           (isDraggable ? '<span class="vn-col-drag-handle" title="Drag to reorder">⠿</span>' : '') +
-          '<span class="cat-dot" style="background:' + group.color + '"></span>' + esc(group.name) +
+          '<span class="cat-dot" style="background:' + group.color + '"></span>' +
+          (isDraggable
+            ? '<span class="vn-cat-name" ondblclick="startRenameCategory(this,\'' + dropCatId + '\')" title="Double-click to rename">' + esc(group.name) + '</span>'
+            : esc(group.name)) +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:0.35rem">' +
           '<span class="vn-cat-column-count">' + group.notes.length + '</span>' +
@@ -6789,9 +6800,11 @@ let vnDragNoteId = null;
 
 // ─── Drag and Drop Category Columns ───
 let vnDragCatId = null;
+let vnDragLastTarget = null;
 
 function startDragColumn(event, catId) {
   vnDragCatId = catId;
+  vnDragLastTarget = null;
   event.dataTransfer.effectAllowed = 'move';
   event.dataTransfer.setData('text/plain', 'col:' + catId);
   setTimeout(() => {
@@ -6801,20 +6814,39 @@ function startDragColumn(event, catId) {
 }
 
 function endDragColumn() {
+  const wasDragging = vnDragCatId !== null;
   vnDragCatId = null;
+  vnDragLastTarget = null;
   document.querySelectorAll('.vn-cat-column').forEach(c =>
     c.classList.remove('col-dragging', 'col-drag-over'));
+  if (wasDragging) saveCategoryOrder();
 }
 
+// Live reorder: columns snap into place as you hover over them
 function vnColDragOver(event, colEl) {
   event.preventDefault();
-  if (vnDragCatId) {
-    colEl.classList.add('col-drag-over');
-    colEl.classList.remove('drag-over');
-  } else {
+  if (!vnDragCatId) {
     colEl.classList.add('drag-over');
     colEl.classList.remove('col-drag-over');
+    return;
   }
+  const targetId = colEl.dataset.catId;
+  if (!targetId || targetId === vnDragCatId || targetId === vnDragLastTarget) return;
+  vnDragLastTarget = targetId;
+
+  const fromIdx = vnCategories.findIndex(c => c.id === vnDragCatId);
+  const toIdx   = vnCategories.findIndex(c => c.id === targetId);
+  if (fromIdx === -1 || toIdx === -1) return;
+
+  const [dragged] = vnCategories.splice(fromIdx, 1);
+  vnCategories.splice(toIdx, 0, dragged);
+
+  renderVnTodos();
+  // Restore the dragging style after re-render
+  requestAnimationFrame(() => {
+    const dc = document.querySelector('.vn-cat-column[data-cat-id="' + vnDragCatId + '"]');
+    if (dc) dc.classList.add('col-dragging');
+  });
 }
 
 function vnColDragLeave(colEl) {
@@ -6823,28 +6855,15 @@ function vnColDragLeave(colEl) {
 
 function vnColDrop(event, catId, colEl) {
   colEl.classList.remove('drag-over', 'col-drag-over');
-  if (vnDragCatId !== null) {
-    const from = vnDragCatId;
-    vnDragCatId = null;
-    dropColumnReorder(from, catId);
-  } else {
+  // Column reorder is already applied live during dragover; endDragColumn saves it.
+  if (vnDragCatId === null) {
     dropNoteOnCategory(event, catId);
   }
 }
 
-async function dropColumnReorder(draggedId, targetId) {
-  if (!draggedId || !targetId || draggedId === targetId) return;
-  const fromIdx = vnCategories.findIndex(c => c.id === draggedId);
-  const toIdx   = vnCategories.findIndex(c => c.id === targetId);
-  if (fromIdx === -1 || toIdx === -1) return;
-
-  const [dragged] = vnCategories.splice(fromIdx, 1);
-  vnCategories.splice(toIdx, 0, dragged);
+async function saveCategoryOrder() {
   vnCategories.forEach((c, i) => { c.sort_order = i + 1; });
-
-  renderVnTodos();
   renderVnCategories();
-
   const token = currentSession?.access_token || SUPABASE_ANON;
   await Promise.all(vnCategories.map(c =>
     fetch(SUPABASE_URL + '/rest/v1/todo_categories?id=eq.' + c.id, {
@@ -6853,6 +6872,43 @@ async function dropColumnReorder(draggedId, targetId) {
       body: JSON.stringify({ sort_order: c.sort_order })
     })
   )).catch(e => console.error('Failed to save category order:', e));
+}
+
+function startRenameCategory(nameEl, catId) {
+  const cat = vnCategories.find(c => c.id === catId);
+  if (!cat) return;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = cat.name;
+  input.className = 'vn-cat-rename-input';
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let saved = false;
+  async function saveRename() {
+    if (saved) return;
+    saved = true;
+    const newName = input.value.trim() || cat.name;
+    cat.name = newName;
+    // Restore the span with updated name
+    nameEl.textContent = newName;
+    input.replaceWith(nameEl);
+    renderVnCategories();
+    const token = currentSession?.access_token || SUPABASE_ANON;
+    await fetch(SUPABASE_URL + '/rest/v1/todo_categories?id=eq.' + catId, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName })
+    }).catch(e => console.error('Rename failed:', e));
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); saveRename(); }
+    if (e.key === 'Escape') { saved = true; input.replaceWith(nameEl); }
+  });
+  input.addEventListener('blur', saveRename);
 }
 
 
