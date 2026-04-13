@@ -1353,6 +1353,14 @@ body {
 }
 .vn-empty-icon { font-size: 3rem; margin-bottom: 0.5rem; opacity: 0.3; }
 .vn-empty h3 { font-family: 'Montserrat', sans-serif; font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+.vn-fab {
+  position: fixed; bottom: 2rem; right: 2rem; z-index: 50;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--gold); color: #fff; border: none; cursor: pointer;
+  font-size: 1.7rem; line-height: 1; display: none; align-items: center; justify-content: center;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.22); transition: transform 0.15s, box-shadow 0.15s;
+}
+.vn-fab:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(0,0,0,0.28); }
 
 /* ─── Transport Sidebar ─── */
 .vn-sidebar-toggle {
@@ -2603,6 +2611,9 @@ body {
       </div>
 
     </div>
+
+  <!-- Floating action button — shown on To-Do tab only -->
+  <button class="vn-fab" id="vnFab" onclick="openNewNote()" title="New detailed note">+</button>
 
   <!-- ═══ GOAL MODAL ═══ -->
   <div class="overlay" id="goalOverlay">
@@ -4034,6 +4045,8 @@ function switchTab(tab) {
   document.getElementById('analyticsSection').style.display = tab === 'analytics' ? 'block' : 'none';
   document.getElementById('voicetypeSection').style.display = tab === 'voicetype' ? 'block' : 'none';
   document.getElementById('voicenotesSection').style.display = tab === 'voicenotes' ? 'block' : 'none';
+  const fab = document.getElementById('vnFab');
+  if (fab) fab.style.display = tab === 'voicenotes' ? 'flex' : 'none';
   if (tab === 'campaigns') loadCampaigns();
   if (tab === 'analytics') loadAnalyticsDashboard();
   if (tab === 'voicetype') loadVtSettings();
@@ -6622,10 +6635,23 @@ async function toggleVnComplete(noteId) {
   renderVnTodos();
 }
 
+function openNewNote() {
+  populateVnCategorySelectors();
+  document.getElementById('vnNoteEditId').value = '';
+  document.getElementById('vnNoteEditTitle').value = '';
+  document.getElementById('vnNoteEditTranscript').value = '';
+  document.getElementById('vnNoteEditCategory').value = vnActiveCategory || '';
+  document.getElementById('vnNoteEditPriority').value = 'normal';
+  document.getElementById('vnNoteEditDue').value = vnSelectedDate ? vnSelectedDate + 'T09:00' : '';
+  document.getElementById('vnNoteEditStudent').value = '';
+  document.getElementById('vnNoteEditStudentId').value = '';
+  document.getElementById('vnNoteTitle').textContent = 'New Note';
+  openModal('vnNoteOverlay');
+}
+
 function openVnNote(noteId) {
   const note = vnNotes.find(n => n.id === noteId);
   if (!note) return;
-  // Ensure category dropdown is populated before setting value
   populateVnCategorySelectors();
   document.getElementById('vnNoteEditId').value = noteId;
   document.getElementById('vnNoteEditTitle').value = note.title || '';
@@ -6635,33 +6661,53 @@ function openVnNote(noteId) {
   document.getElementById('vnNoteEditDue').value = note.due_date ? note.due_date.slice(0, 16) : '';
   document.getElementById('vnNoteEditStudent').value = note.tagged_student || '';
   document.getElementById('vnNoteEditStudentId').value = note.tagged_student_id || '';
-  document.getElementById('vnNoteTitle').textContent = note.title || 'Voice Note';
+  document.getElementById('vnNoteTitle').textContent = note.title || 'Note';
   openModal('vnNoteOverlay');
 }
 
 async function saveVnNote() {
   const noteId = document.getElementById('vnNoteEditId').value;
-  if (!noteId) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
-  const updates = {
-    title: document.getElementById('vnNoteEditTitle').value.trim(),
-    transcript: document.getElementById('vnNoteEditTranscript').value.trim(),
-    category_id: document.getElementById('vnNoteEditCategory').value || null,
-    priority: document.getElementById('vnNoteEditPriority').value,
-    due_date: document.getElementById('vnNoteEditDue').value || null,
-    tagged_student: document.getElementById('vnNoteEditStudent').value.trim(),
-    tagged_student_id: document.getElementById('vnNoteEditStudentId').value || '',
-    updated_at: new Date().toISOString()
+  const fields = {
+    title:            document.getElementById('vnNoteEditTitle').value.trim(),
+    transcript:       document.getElementById('vnNoteEditTranscript').value.trim(),
+    category_id:      document.getElementById('vnNoteEditCategory').value || null,
+    priority:         document.getElementById('vnNoteEditPriority').value,
+    due_date:         document.getElementById('vnNoteEditDue').value || null,
+    tagged_student:   document.getElementById('vnNoteEditStudent').value.trim(),
+    tagged_student_id:document.getElementById('vnNoteEditStudentId').value || '',
+    updated_at:       new Date().toISOString()
   };
 
+  if (!noteId) {
+    // ── CREATE ──
+    const res = await fetch(SUPABASE_URL + '/rest/v1/voice_notes', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token,
+                 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify({ ...fields, user_id: currentUser.id, status: 'pending',
+                             created_at: new Date().toISOString() })
+    });
+    if (res.ok) {
+      const [created] = await res.json();
+      vnNotes.unshift(created);
+      updateVnStats();
+    }
+    closeModal('vnNoteOverlay');
+    renderVnTodos();
+    renderVnCarousel();
+    toast('Note created', true);
+    return;
+  }
+
+  // ── UPDATE ──
   await fetch(SUPABASE_URL + '/rest/v1/voice_notes?id=eq.' + noteId, {
     method: 'PATCH',
     headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates)
+    body: JSON.stringify(fields)
   });
-
   const note = vnNotes.find(n => n.id === noteId);
-  if (note) Object.assign(note, updates);
+  if (note) Object.assign(note, fields);
   closeModal('vnNoteOverlay');
   renderVnTodos();
   toast('Note updated', true);
