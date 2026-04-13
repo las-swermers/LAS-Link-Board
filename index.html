@@ -1242,13 +1242,6 @@ body {
 }
 .vn-cat-column-header:hover .vn-col-drag-handle { opacity: 1; }
 .vn-col-drag-handle:active { cursor: grabbing; }
-.vn-completed-toggle {
-  font-size: 0.7rem; color: var(--text-muted); cursor: pointer; padding: 4px 6px;
-  border-radius: 6px; user-select: none; display: inline-flex; align-items: center; gap: 4px;
-  transition: background 0.15s; margin-top: 2px;
-}
-.vn-completed-toggle:hover { background: var(--surface); }
-.vn-completed-section { margin-top: 2px; display: flex; flex-direction: column; gap: 0.4rem; }
 .vn-cat-column-header {
   padding: 0.75rem 0.85rem 0.5rem; display: flex; align-items: center; justify-content: space-between;
 }
@@ -6474,18 +6467,7 @@ function renderVnTodos() {
 
   list.innerHTML = visibleGroups.map(([catId, group]) => {
     const dropCatId = catId === '__uncategorized__' ? '' : catId;
-    const activeNotes = group.notes.filter(n => n.status !== 'completed');
-    const doneNotes   = group.notes.filter(n => n.status === 'completed');
-    const activeHtml  = activeNotes.map(n => buildNoteCard(n)).join('');
-    const doneHtml    = doneNotes.map(n => buildNoteCard(n)).join('');
-    const colKey      = dropCatId || '__uncategorized__';
-    const doneExpanded = vnCompletedExpanded.has(colKey);
-    const doneSection  = doneNotes.length
-      ? '<div class="vn-completed-toggle" onclick="toggleCompletedNotes(\'' + colKey + '\')">' +
-          (doneExpanded ? '▾' : '▸') + ' ' + doneNotes.length + ' done' +
-        '</div>' +
-        (doneExpanded ? '<div class="vn-completed-section">' + doneHtml + '</div>' : '')
-      : '';
+    const notesHtml   = group.notes.map(n => buildNoteCard(n)).join('');
     const isDraggable = !!dropCatId;
     return '<div class="vn-cat-column" data-cat-id="' + dropCatId + '" ondragover="vnColDragOver(event,this)" ondragleave="vnColDragLeave(this)" ondrop="vnColDrop(event,\'' + dropCatId + '\',this)">' +
       '<div class="vn-cat-column-header"' +
@@ -6495,16 +6477,15 @@ function renderVnTodos() {
           '<span class="cat-dot" style="background:' + group.color + '"></span>' + esc(group.name) +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:0.35rem">' +
-          '<span class="vn-cat-column-count">' + activeNotes.length + '</span>' +
+          '<span class="vn-cat-column-count">' + group.notes.length + '</span>' +
           (isDraggable ? '<button class="vn-cat-delete" onclick="deleteCategoryFromColumn(\'' + dropCatId + '\')" title="Delete category">&times;</button>' : '') +
         '</div>' +
       '</div>' +
-      '<div class="vn-cat-column-body">' + activeHtml +
+      '<div class="vn-cat-column-body">' + notesHtml +
         '<input type="text" class="vn-inline-add" placeholder="+ Add a note..." ' +
           'onkeydown="if(event.key===\'Enter\')addInlineNote(this,\'' + dropCatId + '\')" ' +
           'onfocus="this.placeholder=\'Type and press Enter\'" ' +
           'onblur="this.placeholder=\'+ Add a note...\'">' +
-        doneSection +
       '</div>' +
     '</div>';
   }).join('');
@@ -6808,7 +6789,6 @@ let vnDragNoteId = null;
 
 // ─── Drag and Drop Category Columns ───
 let vnDragCatId = null;
-const vnCompletedExpanded = new Set();
 
 function startDragColumn(event, catId) {
   vnDragCatId = catId;
@@ -6875,14 +6855,6 @@ async function dropColumnReorder(draggedId, targetId) {
   )).catch(e => console.error('Failed to save category order:', e));
 }
 
-function toggleCompletedNotes(colKey) {
-  if (vnCompletedExpanded.has(colKey)) {
-    vnCompletedExpanded.delete(colKey);
-  } else {
-    vnCompletedExpanded.add(colKey);
-  }
-  renderVnTodos();
-}
 
 function startDragNote(event, noteId) {
   vnDragNoteId = noteId;
