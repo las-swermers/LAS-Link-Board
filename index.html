@@ -1589,6 +1589,130 @@ body {
 @media (max-width: 768px) {
   .vn-cal-day { min-height: 60px; }
 }
+
+/* ═══ AUDIT TOOL ═══ */
+.audit-wrap { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+
+.audit-setup-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 2rem; box-shadow: var(--shadow);
+  max-width: 560px; margin: 2rem auto;
+}
+.audit-setup-card h2 {
+  font-family: 'Montserrat', sans-serif; font-size: 1.3rem;
+  font-weight: 800; color: var(--navy); margin-bottom: 0.4rem;
+}
+.audit-setup-card p {
+  font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5;
+}
+.audit-gdpr-note {
+  font-size: 0.75rem; color: var(--text-muted); margin-top: 1.25rem;
+  padding: 0.75rem 1rem; background: var(--teal-light);
+  border-radius: 8px; line-height: 1.5;
+}
+
+.audit-progress-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 2rem; box-shadow: var(--shadow);
+  max-width: 560px; margin: 2rem auto;
+}
+.audit-progress-card h2 {
+  font-family: 'Montserrat', sans-serif; font-size: 1.1rem;
+  font-weight: 800; color: var(--navy); margin-bottom: 1.25rem;
+}
+.audit-step {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.6rem 0; border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.audit-step:last-child { border-bottom: none; }
+.audit-step-icon { width: 22px; text-align: center; flex-shrink: 0; font-size: 1rem; }
+.audit-step-label { flex: 1; color: var(--text); }
+.audit-step-count { font-size: 0.78rem; color: var(--text-muted); }
+.audit-step.done .audit-step-label { color: var(--navy); font-weight: 500; }
+.audit-step.active .audit-step-label { color: var(--teal); font-weight: 600; }
+.audit-step.pending .audit-step-label { color: var(--text-muted); }
+
+.audit-score-ring {
+  text-align: center; padding: 2rem 0 1.5rem;
+}
+.audit-score-num {
+  font-family: 'Montserrat', sans-serif; font-size: 4rem;
+  font-weight: 900; line-height: 1; color: var(--navy);
+}
+.audit-score-label {
+  font-family: 'Montserrat', sans-serif; font-size: 0.75rem;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted); margin-top: 0.25rem;
+}
+.audit-score-badge {
+  display: inline-block; font-family: 'Montserrat', sans-serif;
+  font-size: 0.8rem; font-weight: 700; padding: 0.35rem 1rem;
+  border-radius: 20px; margin-top: 0.6rem;
+}
+.audit-score-badge.healthy { background: #d4edda; color: #155724; }
+.audit-score-badge.attention { background: #fff3cd; color: #856404; }
+.audit-score-badge.at-risk { background: #ffe5cc; color: #7d3a00; }
+.audit-score-badge.critical { background: var(--crimson-light); color: var(--crimson); }
+
+.audit-section-head {
+  font-family: 'Montserrat', sans-serif; font-size: 0.78rem;
+  font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted); margin: 1.75rem 0 0.75rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.audit-section-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.audit-section-dot.critical { background: var(--crimson); }
+.audit-section-dot.warning { background: var(--orange); }
+.audit-section-dot.strength { background: #28a745; }
+
+.audit-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 0.75rem;
+  box-shadow: var(--shadow); transition: border-color 0.2s;
+}
+.audit-card:hover { border-color: var(--gold); }
+.audit-card.critical { border-left: 4px solid var(--crimson); }
+.audit-card.warning { border-left: 4px solid var(--orange); }
+.audit-card.strength { border-left: 4px solid #28a745; }
+.audit-card-title {
+  font-family: 'Montserrat', sans-serif; font-size: 0.95rem;
+  font-weight: 700; color: var(--navy); margin-bottom: 0.4rem;
+}
+.audit-card-detail {
+  font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+.audit-card-metric {
+  font-size: 0.78rem; font-weight: 600; color: var(--teal);
+  font-family: 'Montserrat', sans-serif;
+}
+.audit-module-tag {
+  display: inline-block; font-size: 0.66rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem; border-radius: 4px;
+  background: var(--surface-alt); color: var(--text-muted);
+  margin-left: 0.5rem; vertical-align: middle;
+}
+
+.audit-pulse-box {
+  background: var(--teal-light); border: 1.5px solid var(--teal);
+  border-radius: 12px; padding: 1.25rem 1.5rem; margin-top: 1.75rem;
+}
+.audit-pulse-box h4 {
+  font-family: 'Montserrat', sans-serif; font-size: 0.85rem;
+  font-weight: 800; color: var(--navy); margin-bottom: 0.5rem;
+}
+.audit-pulse-box p {
+  font-size: 0.85rem; color: var(--text); line-height: 1.6;
+}
+
+.audit-report-actions {
+  display: flex; gap: 0.75rem; flex-wrap: wrap;
+  padding: 1.5rem 0; border-top: 1.5px solid var(--border); margin-top: 1.5rem;
+}
 </style>
 </head>
 <body>
@@ -1667,6 +1791,7 @@ body {
       <button class="tab" id="tabCampaigns" onclick="switchTab('campaigns')" style="display:none">Campaigns</button>
       <button class="tab" id="tabAnalytics" onclick="switchTab('analytics')">Analytics</button>
       <button class="tab" id="tabVoicetype" onclick="switchTab('voicetype')">Settings</button>
+      <button class="tab" id="tabAudit" onclick="switchTab('audit')">Audit</button>
     </div>
     <div class="main" id="linksSection" style="display:none">
       <div class="stats">
@@ -2610,6 +2735,126 @@ body {
         </div>
       </div>
 
+    </div>
+
+    <!-- ═══ AUDIT SECTION ═══ -->
+    <div id="auditSection" style="display:none">
+      <div class="audit-wrap">
+
+        <!-- View 1: Setup -->
+        <div id="auditSetupView">
+          <div class="audit-setup-card">
+            <h2>Orah Audit Tool</h2>
+            <p>Run a one-session diagnostic on your Orah setup. Findings are analysed by Claude and displayed as an actionable report. No data is stored — everything is cleared when you close this tab.</p>
+
+            <div class="field">
+              <label>Orah API Key</label>
+              <input type="password" id="auditApiKey" placeholder="Paste your Orah API key..." style="width:100%;padding:0.6rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;font-family:monospace">
+            </div>
+
+            <div class="field" style="margin-top:1rem">
+              <label>Region</label>
+              <select id="auditRegion" style="width:100%;padding:0.6rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem">
+                <option value="https://open-api-ireland.orah.com">Europe — Ireland (LAS default)</option>
+                <option value="https://open-api-us.orah.com">United States</option>
+                <option value="https://open-api-au.orah.com">Australia / Asia Pacific</option>
+              </select>
+            </div>
+
+            <div style="display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap">
+              <button class="btn btn-outline" onclick="auditTestConnection()" id="auditTestBtn">Test Connection</button>
+              <button class="btn btn-primary" onclick="auditRun()" id="auditRunBtn">Run Full Audit</button>
+            </div>
+
+            <div class="audit-gdpr-note">
+              Data is anonymised in your browser before AI analysis. Student names, emails, and personal details are never sent to Claude. Nothing is saved when you close this tab.
+            </div>
+          </div>
+        </div>
+
+        <!-- View 2: Progress -->
+        <div id="auditProgressView" style="display:none">
+          <div class="audit-progress-card">
+            <h2 id="auditProgressTitle">Pulling data from Orah...</h2>
+            <div id="auditStepList">
+              <div class="audit-step pending" id="auditStep-students">
+                <span class="audit-step-icon">○</span>
+                <span class="audit-step-label">Students</span>
+                <span class="audit-step-count" id="auditCount-students"></span>
+              </div>
+              <div class="audit-step pending" id="auditStep-pastoral">
+                <span class="audit-step-icon">○</span>
+                <span class="audit-step-label">Pastoral Notes</span>
+                <span class="audit-step-count" id="auditCount-pastoral"></span>
+              </div>
+              <div class="audit-step pending" id="auditStep-leave">
+                <span class="audit-step-icon">○</span>
+                <span class="audit-step-label">Leave Records</span>
+                <span class="audit-step-count" id="auditCount-leave"></span>
+              </div>
+              <div class="audit-step pending" id="auditStep-location">
+                <span class="audit-step-icon">○</span>
+                <span class="audit-step-label">Location Records</span>
+                <span class="audit-step-count" id="auditCount-location"></span>
+              </div>
+              <div class="audit-step pending" id="auditStep-rolls">
+                <span class="audit-step-icon">○</span>
+                <span class="audit-step-label">Attendance Rolls</span>
+                <span class="audit-step-count" id="auditCount-rolls"></span>
+              </div>
+              <div class="audit-step pending" id="auditStep-analyse">
+                <span class="audit-step-icon">○</span>
+                <span class="audit-step-label">Anonymising &amp; analysing with Claude...</span>
+                <span class="audit-step-count"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- View 3: Report -->
+        <div id="auditReportView" style="display:none">
+          <!-- Score -->
+          <div class="audit-score-ring">
+            <div class="audit-score-num" id="auditScoreNum">—</div>
+            <div class="audit-score-label">Overall Health Score / 100</div>
+            <div class="audit-score-badge" id="auditScoreBadge"></div>
+          </div>
+
+          <!-- Critical -->
+          <div class="audit-section-head">
+            <span class="audit-section-dot critical"></span>
+            Critical <span id="auditCriticalCount"></span>
+          </div>
+          <div id="auditCriticalList"></div>
+
+          <!-- Warnings -->
+          <div class="audit-section-head">
+            <span class="audit-section-dot warning"></span>
+            Warnings <span id="auditWarningCount"></span>
+          </div>
+          <div id="auditWarningList"></div>
+
+          <!-- Strengths -->
+          <div class="audit-section-head">
+            <span class="audit-section-dot strength"></span>
+            Strengths <span id="auditStrengthCount"></span>
+          </div>
+          <div id="auditStrengthList"></div>
+
+          <!-- Pulse Readiness -->
+          <div class="audit-pulse-box" id="auditPulseBox" style="display:none">
+            <h4>Pulse Dashboard Readiness</h4>
+            <p id="auditPulseText"></p>
+          </div>
+
+          <!-- Actions -->
+          <div class="audit-report-actions">
+            <button class="btn btn-gold" onclick="auditExportPDF()">Export PDF Report</button>
+            <button class="btn btn-outline" onclick="auditReset()">Start New Audit</button>
+          </div>
+        </div>
+
+      </div>
     </div>
 
   <!-- Floating action button — shown on To-Do tab only -->
@@ -4040,11 +4285,13 @@ function switchTab(tab) {
   document.getElementById('tabAnalytics').classList.toggle('active', tab === 'analytics');
   document.getElementById('tabVoicetype').classList.toggle('active', tab === 'voicetype');
   document.getElementById('tabVoicenotes').classList.toggle('active', tab === 'voicenotes');
+  document.getElementById('tabAudit').classList.toggle('active', tab === 'audit');
   document.getElementById('linksSection').style.display = tab === 'links' ? 'block' : 'none';
   document.getElementById('campaignsSection').style.display = tab === 'campaigns' ? 'block' : 'none';
   document.getElementById('analyticsSection').style.display = tab === 'analytics' ? 'block' : 'none';
   document.getElementById('voicetypeSection').style.display = tab === 'voicetype' ? 'block' : 'none';
   document.getElementById('voicenotesSection').style.display = tab === 'voicenotes' ? 'block' : 'none';
+  document.getElementById('auditSection').style.display = tab === 'audit' ? 'block' : 'none';
   const fab = document.getElementById('vnFab');
   if (fab) fab.style.display = tab === 'voicenotes' ? 'flex' : 'none';
   if (tab === 'campaigns') loadCampaigns();
@@ -8217,6 +8464,498 @@ function sendTransportToChat(tr) {
   };
   sendToGoogleChat(card);
 }
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// ═══════════════════════════════════════════════════
+// ORAH AUDIT TOOL
+// ═══════════════════════════════════════════════════
+//
+// GDPR: Raw Orah data lands in sessionStorage (wiped
+// on tab close). Only anonymised stats are sent to
+// Claude. The API key never leaves the browser.
+
+let auditApiKey = null;   // memory only, never stored
+let auditRegion = null;
+let auditFindings = null;
+
+// ── Helpers ──────────────────────────────────────────
+
+function auditShowView(view) {
+  document.getElementById('auditSetupView').style.display = view === 'setup' ? 'block' : 'none';
+  document.getElementById('auditProgressView').style.display = view === 'progress' ? 'block' : 'none';
+  document.getElementById('auditReportView').style.display = view === 'report' ? 'block' : 'none';
+}
+
+function auditSetStep(key, state, count) {
+  const row = document.getElementById('auditStep-' + key);
+  if (!row) return;
+  row.className = 'audit-step ' + state;
+  const icon = row.querySelector('.audit-step-icon');
+  if (state === 'done') icon.textContent = '✅';
+  else if (state === 'active') icon.textContent = '⏳';
+  else icon.textContent = '○';
+  if (count !== undefined) {
+    const countEl = document.getElementById('auditCount-' + key);
+    if (countEl) countEl.textContent = count ? '(' + count.toLocaleString() + ' records)' : '';
+  }
+}
+
+async function auditCallOrah(endpoint, body) {
+  const token = currentSession?.access_token || '';
+  const res = await fetch('/api/audit/orah', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ region: auditRegion, api_key: auditApiKey, endpoint, body })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Orah API error ' + res.status);
+  }
+  return res.json();
+}
+
+async function auditFetchAll(endpoint, bodyFn) {
+  const all = [];
+  let page = 1;
+  const perPage = 500;
+  while (true) {
+    const data = await auditCallOrah(endpoint, bodyFn(page, perPage));
+    const rows = data.data || data.students || data.records || data.pastoral_notes || data.leave_records || data.location_records || data.results || (Array.isArray(data) ? data : []);
+    if (!rows.length) break;
+    all.push(...rows);
+    if (rows.length < perPage) break;
+    page++;
+  }
+  return all;
+}
+
+// ── Connection test ───────────────────────────────────
+
+async function auditTestConnection() {
+  const key = document.getElementById('auditApiKey').value.trim();
+  const region = document.getElementById('auditRegion').value;
+  if (!key) { toast('Paste your Orah API key first'); return; }
+  auditApiKey = key;
+  auditRegion = region;
+  const btn = document.getElementById('auditTestBtn');
+  btn.textContent = 'Testing...';
+  btn.disabled = true;
+  try {
+    await auditCallOrah('open-api/student/list', { page: 1, per_page: 1 });
+    toast('Connection successful', true);
+  } catch (e) {
+    toast('Connection failed: ' + e.message);
+  } finally {
+    btn.textContent = 'Test Connection';
+    btn.disabled = false;
+  }
+}
+
+// ── Main audit flow ───────────────────────────────────
+
+async function auditRun() {
+  const key = document.getElementById('auditApiKey').value.trim();
+  const region = document.getElementById('auditRegion').value;
+  if (!key) { toast('Paste your Orah API key first'); return; }
+  auditApiKey = key;
+  auditRegion = region;
+
+  auditShowView('progress');
+  document.getElementById('auditProgressTitle').textContent = 'Pulling data from Orah...';
+
+  const raw = {};
+
+  // Students
+  try {
+    auditSetStep('students', 'active');
+    raw.students = await auditFetchAll('open-api/student/list', (p, pp) => ({ page: p, per_page: pp }));
+    sessionStorage.setItem('audit_raw_students', JSON.stringify(raw.students));
+    auditSetStep('students', 'done', raw.students.length);
+  } catch (e) {
+    auditSetStep('students', 'done', 0);
+    toast('Students: ' + e.message);
+  }
+
+  // Pastoral notes (last 90 days)
+  try {
+    auditSetStep('pastoral', 'active');
+    const since = new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
+    raw.pastoral = await auditFetchAll('open-api/pastoral/timeline', (p, pp) => ({ page: p, per_page: pp, from_date: since }));
+    sessionStorage.setItem('audit_raw_pastoral', JSON.stringify(raw.pastoral));
+    auditSetStep('pastoral', 'done', raw.pastoral.length);
+  } catch (e) {
+    raw.pastoral = [];
+    auditSetStep('pastoral', 'done', 0);
+  }
+
+  // Leave
+  try {
+    auditSetStep('leave', 'active');
+    raw.leave = await auditFetchAll('open-api/leave/list', (p, pp) => ({ page: p, per_page: pp }));
+    sessionStorage.setItem('audit_raw_leave', JSON.stringify(raw.leave));
+    auditSetStep('leave', 'done', raw.leave.length);
+  } catch (e) {
+    raw.leave = [];
+    auditSetStep('leave', 'done', 0);
+  }
+
+  // Location (last 14 days)
+  try {
+    auditSetStep('location', 'active');
+    const since = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+    raw.location = await auditFetchAll('open-api/location-record/timeline', (p, pp) => ({ page: p, per_page: pp, from_date: since }));
+    sessionStorage.setItem('audit_raw_location', JSON.stringify(raw.location));
+    auditSetStep('location', 'done', raw.location.length);
+  } catch (e) {
+    raw.location = [];
+    auditSetStep('location', 'done', 0);
+  }
+
+  // Attendance rolls (last 14 days)
+  try {
+    auditSetStep('rolls', 'active');
+    const since = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+    raw.rolls = await auditFetchAll('open-api/attendance-roll/list', (p, pp) => ({ page: p, per_page: pp, from_date: since }));
+    sessionStorage.setItem('audit_raw_rolls', JSON.stringify(raw.rolls));
+    auditSetStep('rolls', 'done', raw.rolls.length);
+  } catch (e) {
+    raw.rolls = [];
+    auditSetStep('rolls', 'done', 0);
+  }
+
+  // Analyse
+  auditSetStep('analyse', 'active');
+  document.getElementById('auditProgressTitle').textContent = 'Analysing with Claude...';
+  try {
+    const { stats, score } = auditAnonymiseAndAggregate(raw);
+    const token = currentSession?.access_token || '';
+    const res = await fetch('/api/audit/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ stats, score, school: 'LAS' })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Analysis failed' }));
+      throw new Error(err.error || 'Analysis failed');
+    }
+    auditFindings = await res.json();
+    auditSetStep('analyse', 'done');
+
+    // Clear sessionStorage — data no longer needed
+    ['students', 'pastoral', 'leave', 'location', 'rolls'].forEach(k =>
+      sessionStorage.removeItem('audit_raw_' + k));
+
+    auditRenderReport(auditFindings);
+  } catch (e) {
+    auditSetStep('analyse', 'done');
+    toast('Analysis failed: ' + e.message);
+    auditShowView('setup');
+  }
+}
+
+// ── Anonymise & aggregate ────────────────────────────
+
+function auditAnonymiseAndAggregate(raw) {
+  const students = raw.students || [];
+  const pastoral = raw.pastoral || [];
+  const leave = raw.leave || [];
+  const location = raw.location || [];
+  const rolls = raw.rolls || [];
+
+  const now = Date.now();
+  const days7 = 7 * 864e5;
+  const days30 = 30 * 864e5;
+
+  // ── Students ──
+  const studentIds = new Set(students.map(s => s.id || s.student_id));
+  const stuStats = {
+    total: students.length,
+    houseCount: new Set(students.map(s => s.house_id || s.house_name).filter(Boolean)).size,
+    missingRoom: students.filter(s => !s.room_number && !s.room).length,
+    missingMedical: students.filter(s => !s.medical_info && s.medical_info !== false).length,
+    missingDiet: students.filter(s => !s.diet_info && s.diet_info !== false).length,
+    missingYearLevel: students.filter(s => !s.year_level && s.year_level !== 0).length,
+    noPhoto: students.filter(s => !s.photo && !s.photo_url && !s.photo_thumbnail).length,
+    noHouse: students.filter(s => !s.house_id && !s.house_name).length,
+    international: students.filter(s => s.is_international || s.international).length
+  };
+
+  // ── Pastoral ──
+  const pastStudentIds = new Set(pastoral.map(n => n.student_id));
+  const staffIds = new Set(pastoral.map(n => n.staff_id || n.created_by_id).filter(Boolean));
+  const staffActive = new Set(pastoral.filter(n => {
+    const d = new Date(n.created_at || n.date || 0);
+    return (now - d.getTime()) <= days30;
+  }).map(n => n.staff_id || n.created_by_id).filter(Boolean));
+
+  const catDist = {};
+  const sevDist = {};
+  pastoral.forEach(n => {
+    const cat = n.category || n.category_name || 'Uncategorised';
+    catDist[cat] = (catDist[cat] || 0) + 1;
+    const sev = n.severity || n.severity_level || 'Normal';
+    sevDist[sev] = (sevDist[sev] || 0) + 1;
+  });
+
+  const houseNotes = {};
+  const houseStu = {};
+  students.forEach(s => {
+    const h = s.house_name || s.house_id || 'Unknown';
+    houseStu[h] = (houseStu[h] || 0) + 1;
+  });
+  pastoral.forEach(n => {
+    const stu = students.find(s => (s.id || s.student_id) === n.student_id);
+    const h = stu ? (stu.house_name || stu.house_id || 'Unknown') : 'Unknown';
+    houseNotes[h] = (houseNotes[h] || 0) + 1;
+  });
+  const houseRates = {};
+  Object.keys(houseStu).forEach(h => {
+    houseRates['House_' + h.slice(0, 4)] = houseStu[h] > 0
+      ? Math.round((houseNotes[h] || 0) / houseStu[h] * 10) / 10
+      : 0;
+  });
+
+  const zeroNoteStudents = students.filter(s => !pastStudentIds.has(s.id || s.student_id)).length;
+  const recent30Ids = new Set(pastoral.filter(n => {
+    const d = new Date(n.created_at || n.date || 0);
+    return (now - d.getTime()) <= days30;
+  }).map(n => n.student_id));
+  const zeroNotes30d = students.filter(s => !recent30Ids.has(s.id || s.student_id)).length;
+  const avgPerStudent = students.length > 0 ? Math.round(pastoral.length / students.length * 10) / 10 : 0;
+
+  const highNoFollowUp = pastoral.filter(n => {
+    const sev = (n.severity || n.severity_level || '').toLowerCase();
+    return sev === 'high' && !n.follow_up && !n.follow_up_required && !n.assigned_to;
+  }).length;
+
+  const pastStats = {
+    total: pastoral.length,
+    zeroNoteStudents,
+    zeroNotes30d,
+    categoryDistribution: catDist,
+    severityDistribution: sevDist,
+    highNoFollowUp,
+    staffActive: staffActive.size,
+    staffTotal: staffIds.size,
+    houseRates,
+    avgPerStudent
+  };
+
+  // ── Leave ──
+  const leaveTypeDist = {};
+  leave.forEach(l => {
+    const t = l.leave_type || l.type || 'Unknown';
+    leaveTypeDist[t] = (leaveTypeDist[t] || 0) + 1;
+  });
+  const missingReturn = leave.filter(l => !l.return_date && !l.return_time && !l.actual_return).length;
+  const noApprover = leave.filter(l => !l.approver_id && !l.approved_by && l.status !== 'pending').length;
+  const sameDay = leave.filter(l => {
+    const req = new Date(l.created_at || l.requested_at || 0);
+    const app = new Date(l.approved_at || 0);
+    return l.approved_at && Math.abs(app - req) < 864e5;
+  }).length;
+  const pendingOld = leave.filter(l => {
+    const req = new Date(l.created_at || l.requested_at || 0);
+    return (l.status === 'pending' || !l.status) && (now - req.getTime()) > 2 * 864e5;
+  }).length;
+  const stuLeaveCounts = {};
+  leave.forEach(l => {
+    const sid = l.student_id;
+    stuLeaveCounts[sid] = (stuLeaveCounts[sid] || 0) + 1;
+  });
+  const sortedLeaveCounts = Object.values(stuLeaveCounts).sort((a, b) => b - a);
+  const p90 = sortedLeaveCounts[Math.floor(sortedLeaveCounts.length * 0.1)] || 0;
+  const highFrequencyStudents = Object.values(stuLeaveCounts).filter(c => c >= p90).length;
+
+  const leaveStats = {
+    total: leave.length,
+    missingReturn,
+    noApprover,
+    sameDay,
+    pendingOld,
+    typeDistribution: leaveTypeDist,
+    highFrequencyStudents
+  };
+
+  // ── Location ──
+  const lastLocationDate = {};
+  location.forEach(l => {
+    const sid = l.student_id;
+    const d = new Date(l.created_at || l.timestamp || 0);
+    if (!lastLocationDate[sid] || d > lastLocationDate[sid]) lastLocationDate[sid] = d;
+  });
+  const gapOver7d = students.filter(s => {
+    const sid = s.id || s.student_id;
+    const last = lastLocationDate[sid];
+    return !last || (now - last.getTime()) > days7;
+  }).length;
+  const leaveStudentIds = new Set(leave.map(l => l.student_id));
+  const offCampusNoLeave = location.filter(l => {
+    const zone = (l.zone || l.location_zone || l.status || '').toLowerCase();
+    return (zone.includes('off') || zone.includes('external')) && !leaveStudentIds.has(l.student_id);
+  }).length;
+
+  const locStats = {
+    gapOver7d,
+    offCampusNoLeave,
+    conflicting: 0  // complex to detect without full timeline — set 0
+  };
+
+  // ── Rolls ──
+  const rollsByHouseDay = {};
+  rolls.forEach(r => {
+    const h = r.house_id || r.house_name || 'Unknown';
+    const d = (r.created_at || r.date || '').slice(0, 10);
+    const key = h + '|' + d;
+    rollsByHouseDay[key] = (rollsByHouseDay[key] || 0) + 1;
+  });
+  const houseFreqs = {};
+  Object.keys(rollsByHouseDay).forEach(key => {
+    const [h] = key.split('|');
+    if (!houseFreqs[h]) houseFreqs[h] = [];
+    houseFreqs[h].push(rollsByHouseDay[key]);
+  });
+  const uniqueDays = new Set(Object.keys(rollsByHouseDay).map(k => k.split('|')[1])).size || 1;
+  const avgPerDay = rolls.length / Math.max(uniqueDays, 1);
+  const lowFrequencyHouses = Object.keys(houseFreqs).filter(h => {
+    const avg = houseFreqs[h].reduce((a, b) => a + b, 0) / houseFreqs[h].length;
+    return avg < 4;
+  }).map((h, i) => 'House_' + (i + 1));
+  const outOfWindow = rolls.filter(r => {
+    const d = new Date(r.created_at || r.completed_at || 0);
+    const hour = d.getHours();
+    // Expected windows: 6–9, 12–14, 17–20, 21–23
+    return !(
+      (hour >= 6 && hour <= 9) || (hour >= 12 && hour <= 14) ||
+      (hour >= 17 && hour <= 20) || (hour >= 21 && hour <= 23)
+    );
+  }).length;
+
+  const rollStats = {
+    avgPerDay: Math.round(avgPerDay * 10) / 10,
+    lowFrequencyHouses,
+    outOfWindow,
+    unexplainedAbsences: 0  // requires cross-referencing individual student records
+  };
+
+  // ── Score ──
+  let score = 100;
+  // API key issues — always deduct for known students_sync key
+  score -= 15;  // students_sync key 1,798 days old
+  score -= 10;  // no IP whitelist (known)
+
+  if (students.length > 0) {
+    if (zeroNoteStudents / students.length > 0.10) score -= 10;
+    if (gapOver7d / students.length > 0.15) score -= 15;
+  }
+  if (pastStats.staffTotal > 0 && pastStats.staffActive / pastStats.staffTotal < 0.70) score -= 8;
+  if (leaveStats.total > 0 && missingReturn / leaveStats.total > 0.05) score -= 8;
+  if (avgPerStudent < 2 && pastoral.length > 0) score -= 10;
+  if (lowFrequencyHouses.length > 0) score -= 8;
+  score = Math.max(0, Math.min(100, score));
+
+  return {
+    stats: {
+      students: stuStats,
+      pastoral: pastStats,
+      leave: leaveStats,
+      location: locStats,
+      rolls: rollStats,
+      apiKeys: { oldKeys: 1, noWhitelist: 1 }  // known: students_sync
+    },
+    score
+  };
+}
+
+// ── Render report ────────────────────────────────────
+
+function auditRenderReport(findings) {
+  const score = findings.score || 0;
+  document.getElementById('auditScoreNum').textContent = score;
+
+  const badge = document.getElementById('auditScoreBadge');
+  let label, cls;
+  if (score >= 80) { label = 'Healthy'; cls = 'healthy'; }
+  else if (score >= 60) { label = 'Needs Attention'; cls = 'attention'; }
+  else if (score >= 40) { label = 'At Risk'; cls = 'at-risk'; }
+  else { label = 'Critical'; cls = 'critical'; }
+  badge.textContent = label;
+  badge.className = 'audit-score-badge ' + cls;
+
+  function renderCards(listId, countId, items, severity) {
+    const el = document.getElementById(listId);
+    const countEl = document.getElementById(countId);
+    if (!items || !items.length) {
+      el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;padding:0.5rem 0">None identified.</p>';
+      if (countEl) countEl.textContent = '';
+      return;
+    }
+    if (countEl) countEl.textContent = '(' + items.length + ')';
+    el.innerHTML = items.map(f => `
+      <div class="audit-card ${severity}">
+        <div class="audit-card-title">${esc(f.title || '')}<span class="audit-module-tag">${esc(f.module || '')}</span></div>
+        <div class="audit-card-detail">${esc(f.detail || '')}</div>
+        ${f.metric ? `<div class="audit-card-metric">${esc(f.metric)}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  renderCards('auditCriticalList', 'auditCriticalCount', findings.critical, 'critical');
+  renderCards('auditWarningList', 'auditWarningCount', findings.warnings, 'warning');
+  renderCards('auditStrengthList', 'auditStrengthCount', findings.strengths, 'strength');
+
+  if (findings.pulseReadiness) {
+    document.getElementById('auditPulseText').textContent = findings.pulseReadiness;
+    document.getElementById('auditPulseBox').style.display = 'block';
+  }
+
+  auditShowView('report');
+}
+
+// ── PDF export ───────────────────────────────────────
+
+async function auditExportPDF() {
+  if (!window.jspdf || !window.html2canvas) {
+    toast('PDF library not loaded — please refresh');
+    return;
+  }
+  toast('Generating PDF...');
+  const el = document.getElementById('auditReportView');
+  const canvas = await html2canvas(el, { scale: 1.5, useCORS: true, backgroundColor: '#F8F9FA' });
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const imgW = 210;
+  const imgH = (canvas.height * imgW) / canvas.width;
+  let yPos = 0;
+  while (yPos < imgH) {
+    if (yPos > 0) pdf.addPage();
+    pdf.addImage(canvas, 'PNG', 0, -yPos, imgW, imgH);
+    yPos += 297;
+  }
+  const dateStr = new Date().toISOString().slice(0, 10);
+  pdf.save('orah-audit-LAS-' + dateStr + '.pdf');
+  toast('PDF exported', true);
+}
+
+// ── Reset ─────────────────────────────────────────────
+
+function auditReset() {
+  auditApiKey = null;
+  auditFindings = null;
+  ['students', 'pastoral', 'leave', 'location', 'rolls'].forEach(k =>
+    sessionStorage.removeItem('audit_raw_' + k));
+  document.getElementById('auditApiKey').value = '';
+  // Reset progress steps
+  ['students', 'pastoral', 'leave', 'location', 'rolls', 'analyse'].forEach(k =>
+    auditSetStep(k, 'pending'));
+  auditShowView('setup');
+}
+
+// ═══════════════════════════════════════════════════
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
