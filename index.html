@@ -6447,9 +6447,14 @@ function renderVnTodos() {
     filtered = filtered.filter(n => n.category_id === vnActiveCategory);
   }
   if (vnSelectedDate) {
+    const today = toDateStr(new Date());
     filtered = filtered.filter(n => {
       const noteDate = n.due_date ? toDateStr(new Date(n.due_date)) : toDateStr(new Date(n.created_at));
-      return noteDate === vnSelectedDate;
+      if (noteDate === vnSelectedDate) return true;
+      // Roll over overdue incomplete notes onto today's view
+      if (vnSelectedDate === today && noteDate < today &&
+          n.status !== 'completed' && n.status !== 'archived') return true;
+      return false;
     });
   }
   if (statusFilter === 'active') {
