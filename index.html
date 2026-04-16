@@ -198,6 +198,48 @@ body {
   background: var(--border);
 }
 
+/* ═══ Demo Mode ═══ */
+.demo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  background: transparent;
+  border: 1.5px solid var(--gold);
+  border-radius: 8px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--gold);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.demo-btn:hover {
+  background: var(--gold);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(197,150,59,0.25);
+}
+.demo-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.demo-banner {
+  background: var(--gold-light);
+  border-bottom: 1.5px solid var(--gold);
+  color: var(--navy);
+  text-align: center;
+  padding: 0.5rem 1rem;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.demo-banner a {
+  color: var(--crimson);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 700;
+}
+
 /* ═══ FORM FIELDS ═══ */
 .field { margin-bottom: 0.9rem; }
 
@@ -1768,6 +1810,12 @@ body {
         <button class="btn btn-primary full" onclick="doRegister()">Create Account</button>
         <p class="auth-toggle">Have an account? <a onclick="flip('login')">Sign in</a></p>
       </div>
+
+      <div class="auth-divider">or</div>
+      <button class="demo-btn" onclick="enterDemo()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        Try Demo
+      </button>
     </div>
   </div>
 
@@ -1783,6 +1831,9 @@ body {
         <span class="topbar-user" id="userName" onclick="openSettings()" style="cursor:pointer" title="Settings"></span>
         <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sign out</button>
       </div>
+    </div>
+    <div id="demoBanner" class="demo-banner" style="display:none">
+      You're viewing a demo &mdash; <a onclick="exitDemo()">Sign up</a> to create your own!
     </div>
     <div class="tab-bar">
       <button class="tab active" id="tabVoicenotes" onclick="switchTab('voicenotes')">To-Do</button>
@@ -3204,6 +3255,7 @@ const DAY_FULL = ['monday','tuesday','wednesday','thursday','friday','saturday',
 let myLinks = [];
 let currentUser = null;
 let currentSession = null;
+let isDemoMode = false;
 
 // ─── Auth ───
 function flip(mode) {
@@ -3239,6 +3291,7 @@ async function doLogin() {
 }
 
 function openSettings() {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const meta = currentUser.user_metadata || {};
   document.getElementById('settingsName').textContent = meta.full_name || meta.name || '—';
@@ -3253,6 +3306,7 @@ function openSettings() {
 }
 
 async function confirmDeleteAccount() {
+  if (demoGuard()) return;
   const ok = confirm('Are you sure you want to permanently delete your account? All your links, QR codes, and scan data will be lost forever.');
   if (!ok) return;
   const doubleCheck = confirm('This CANNOT be undone. Type OK to confirm you want to delete everything.');
@@ -3282,11 +3336,94 @@ async function confirmDeleteAccount() {
 }
 
 async function doLogout() {
+  if (isDemoMode) { exitDemo(); return; }
   await sb.auth.signOut();
   currentUser = null;
   myLinks = [];
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('dash').style.display = 'none';
+}
+
+// ─── Demo Mode ───
+function demoGuard() {
+  if (isDemoMode) { toast('Sign up to use this feature'); return true; }
+  return false;
+}
+
+function enterDemo() {
+  isDemoMode = true;
+  currentUser = {
+    id: 'demo-user-00000000',
+    email: 'demo@example.com',
+    user_metadata: { full_name: 'Demo User' },
+    app_metadata: { provider: 'demo' }
+  };
+  currentSession = null;
+
+  const now = new Date();
+  const ago = (d) => new Date(now - d * 86400000).toISOString();
+
+  // Sample links
+  myLinks = [
+    { id: 'demo-1', user_id: 'demo-user-00000000', slug: 'math-hw', label: 'Math Homework Portal', url: 'https://example.com/math-homework', scans: 47, rules: [], history: [], expires_at: null, created_at: ago(14), updated_at: ago(1) },
+    { id: 'demo-2', user_id: 'demo-user-00000000', slug: 'newsletter', label: 'Parent Newsletter', url: 'https://example.com/parent-newsletter', scans: 132, rules: [], history: [], expires_at: null, created_at: ago(30), updated_at: ago(3) },
+    { id: 'demo-3', user_id: 'demo-user-00000000', slug: 'schedule', label: 'Class Schedule', url: 'https://example.com/class-schedule', scans: 89, rules: [{ days: ['monday','wednesday','friday'], startTime: '08:00', endTime: '15:00', url: 'https://example.com/schedule-live' }], history: [], expires_at: null, created_at: ago(21), updated_at: ago(2) },
+    { id: 'demo-4', user_id: 'demo-user-00000000', slug: 'library', label: 'Library Resources', url: 'https://example.com/library', scans: 23, rules: [], history: [], expires_at: null, created_at: ago(7), updated_at: ago(0) }
+  ];
+
+  // Sample categories
+  vnCategories = [
+    { id: 'demo-cat-1', user_id: 'demo-user-00000000', name: 'General', color: '#13507C', sort_order: 0 },
+    { id: 'demo-cat-2', user_id: 'demo-user-00000000', name: 'Medical', color: '#a42547', sort_order: 1 },
+    { id: 'demo-cat-3', user_id: 'demo-user-00000000', name: 'Admin', color: '#C5963B', sort_order: 2 },
+    { id: 'demo-cat-4', user_id: 'demo-user-00000000', name: 'Follow-up', color: '#ea6733', sort_order: 3 },
+    { id: 'demo-cat-5', user_id: 'demo-user-00000000', name: 'Transport', color: '#2E7D32', sort_order: 4 }
+  ];
+
+  // Sample to-do items
+  const today = new Date().toISOString().slice(0, 10);
+  vnNotes = [
+    { id: 'demo-n-1', user_id: 'demo-user-00000000', title: 'Review field trip permission slips', category_id: 'demo-cat-3', status: 'pending', priority: 'high', due_date: today + 'T00:00:00Z', created_at: ago(2), transcript: '' },
+    { id: 'demo-n-2', user_id: 'demo-user-00000000', title: 'Update parent contact list for Grade 10', category_id: 'demo-cat-1', status: 'in_progress', priority: 'medium', due_date: today + 'T00:00:00Z', created_at: ago(3), transcript: '' },
+    { id: 'demo-n-3', user_id: 'demo-user-00000000', title: 'Prepare quiz for Friday — Ch. 7 review', category_id: 'demo-cat-1', status: 'pending', priority: 'medium', due_date: ago(0).slice(0, 10) + 'T00:00:00Z', created_at: ago(1), transcript: '' },
+    { id: 'demo-n-4', user_id: 'demo-user-00000000', title: 'Follow up with nurse on student allergy plan', category_id: 'demo-cat-2', status: 'pending', priority: 'high', due_date: today + 'T00:00:00Z', created_at: ago(1), transcript: '' },
+    { id: 'demo-n-5', user_id: 'demo-user-00000000', title: 'Email coach about game bus schedule', category_id: 'demo-cat-5', status: 'completed', priority: 'low', due_date: ago(1).slice(0, 10) + 'T00:00:00Z', created_at: ago(4), transcript: '' },
+    { id: 'demo-n-6', user_id: 'demo-user-00000000', title: 'Check on late library book returns', category_id: 'demo-cat-4', status: 'pending', priority: 'low', due_date: today + 'T00:00:00Z', created_at: ago(2), transcript: '' }
+  ];
+
+  vnTransportRequests = [];
+  vnOrahSettings = null;
+
+  // Show dashboard
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('dash').style.display = 'block';
+  document.getElementById('demoBanner').style.display = 'block';
+  document.getElementById('userName').textContent = 'Demo User';
+
+  // Render data
+  render();
+  updateVnStats();
+  renderVnCategories();
+  vnCarouselStart = null;
+  initVnCarousel();
+  renderVnTodos();
+  populateVnCategorySelectors();
+
+  toast('Welcome to the demo!', true);
+}
+
+function exitDemo() {
+  isDemoMode = false;
+  currentUser = null;
+  currentSession = null;
+  myLinks = [];
+  vnNotes = [];
+  vnCategories = [];
+  vnTransportRequests = [];
+  vnOrahSettings = null;
+  document.getElementById('demoBanner').style.display = 'none';
+  document.getElementById('dash').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
 }
 
 async function enter(user) {
@@ -3302,6 +3439,7 @@ async function enter(user) {
 
 // ─── Data ───
 async function loadLinks() {
+  if (isDemoMode) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
   const url = SUPABASE_URL + '/rest/v1/links?user_id=eq.' + currentUser.id + '&order=updated_at.desc';
   const res = await fetch(url, {
@@ -3315,6 +3453,7 @@ async function loadLinks() {
 let editId = null, tempRules = [];
 
 function openCreate() {
+  if (demoGuard()) return;
   editId = null; tempRules = [];
   document.getElementById('editTitle').textContent = 'New Link';
   document.getElementById('editSaveBtn').textContent = 'Create';
@@ -3326,6 +3465,7 @@ function openCreate() {
 }
 
 function openEdit(id) {
+  if (demoGuard()) return;
   const c = myLinks.find(x => x.id === id);
   if (!c) return;
   editId = id;
@@ -3340,6 +3480,7 @@ function openEdit(id) {
 }
 
 async function saveLink() {
+  if (demoGuard()) return;
   const label = val('fLabel'), url = val('fUrl');
   if (!label || !url) return toast('Please fill in label and URL');
   try { new URL(url); } catch(e) { return toast('Please enter a valid URL'); }
@@ -3391,6 +3532,7 @@ async function saveLink() {
 }
 
 async function deleteLink(id) {
+  if (demoGuard()) return;
   if (!confirm('Delete this link? Printed QR codes will stop working.')) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
   const delRes = await fetch(SUPABASE_URL + '/rest/v1/links?id=eq.' + id, {
@@ -3472,6 +3614,7 @@ function updateBulkUI() {
 }
 
 async function bulkDelete() {
+  if (demoGuard()) return;
   if (!selectedIds.size) return;
   if (!confirm(`Delete ${selectedIds.size} link${selectedIds.size > 1 ? 's' : ''}? Printed QR codes will stop working.`)) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
@@ -4301,6 +4444,7 @@ function switchTab(tab) {
 }
 
 async function loadCampaigns() {
+  if (isDemoMode) return;
   if (!currentUser) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
   const res = await fetch(SUPABASE_URL + '/rest/v1/campaigns?user_id=eq.' + currentUser.id + '&order=created_at.desc', {
@@ -4594,6 +4738,7 @@ function filterByRange(items, dateField) {
 
 async function loadAnalyticsDashboard() {
   if (!currentUser) return;
+  if (isDemoMode) { toast('Analytics require real scan data — sign up to track yours!'); return; }
   const token = currentSession?.access_token || SUPABASE_ANON;
   const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token };
 
@@ -5285,6 +5430,7 @@ function switchVtTab(panel) {
 }
 
 async function loadVtSettings() {
+  if (isDemoMode) return;
   if (!currentUser) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
 
@@ -6272,6 +6418,15 @@ let vnRecordingSeconds = 0;
 
 async function loadVoiceNotes() {
   if (!currentUser) return;
+  if (isDemoMode) {
+    updateVnStats();
+    renderVnCategories();
+    if (!vnCarouselStart) initVnCarousel();
+    else renderVnCarousel();
+    renderVnTodos();
+    populateVnCategorySelectors();
+    return;
+  }
   const token = currentSession?.access_token || SUPABASE_ANON;
   const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token };
 
@@ -6321,6 +6476,7 @@ async function loadVoiceNotes() {
 }
 
 async function smartOrganize() {
+  if (demoGuard()) return;
   const activeNotes = vnNotes.filter(n => n.status !== 'completed' && n.status !== 'archived');
   if (activeNotes.length === 0) { toast('No active notes to organize'); return; }
 
@@ -6385,6 +6541,7 @@ async function smartOrganize() {
 }
 
 async function rolloverPastDueNotes() {
+  if (isDemoMode) return;
   const todayStr = toDateStr(new Date());
   const todayDate = todayStr + 'T09:00:00';
   const token = currentSession?.access_token || SUPABASE_ANON;
@@ -6527,6 +6684,7 @@ async function addQuickNote() {
 
 // ─── Voice Notes Recording ───
 async function toggleVnRecording() {
+  if (demoGuard()) return;
   const btn = document.getElementById('vnRecordBtn');
   if (vnMediaRecorder && vnMediaRecorder.state === 'recording') {
     vnMediaRecorder.stop();
@@ -6803,6 +6961,7 @@ function toggleNoteExpand(el) {
 }
 
 async function addInlineNote(input, categoryId) {
+  if (demoGuard()) return;
   const text = input.value.trim();
   if (!text) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
@@ -6838,6 +6997,7 @@ function endDragNote(event) {
 }
 
 async function dropNoteOnCategory(event, newCatId) {
+  if (demoGuard()) return;
   event.preventDefault();
   const noteId = event.dataTransfer.getData('text/plain') || vnDragNoteId;
   if (!noteId) return;
@@ -6865,6 +7025,7 @@ async function dropNoteOnCategory(event, newCatId) {
 
 
 async function toggleVnComplete(noteId) {
+  if (demoGuard()) return;
   const note = vnNotes.find(n => n.id === noteId);
   if (!note) return;
   const newStatus = note.status === 'completed' ? 'pending' : 'completed';
@@ -6885,6 +7046,7 @@ async function toggleVnComplete(noteId) {
 }
 
 function openNewNote() {
+  if (demoGuard()) return;
   populateVnCategorySelectors();
   document.getElementById('vnNoteEditId').value = '';
   document.getElementById('vnNoteEditTitle').value = '';
@@ -6915,6 +7077,7 @@ function openVnNote(noteId) {
 }
 
 async function saveVnNote() {
+  if (demoGuard()) return;
   const noteId = document.getElementById('vnNoteEditId').value;
   const token = currentSession?.access_token || SUPABASE_ANON;
   const fields = {
@@ -6963,6 +7126,7 @@ async function saveVnNote() {
 }
 
 async function deleteVnNote(noteId) {
+  if (demoGuard()) return;
   if (!confirm('Delete this voice note?')) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
   await fetch(SUPABASE_URL + '/rest/v1/voice_notes?id=eq.' + noteId, {
@@ -7168,6 +7332,7 @@ function vnColDrop(event, catId, colEl) {
 }
 
 async function saveCategoryOrder() {
+  if (demoGuard()) return;
   vnCategories.forEach((c, i) => { c.sort_order = i + 1; });
   renderVnCategories();
   const token = currentSession?.access_token || SUPABASE_ANON;
@@ -7181,6 +7346,7 @@ async function saveCategoryOrder() {
 }
 
 function startRenameCategory(nameEl, catId) {
+  if (demoGuard()) return;
   const cat = vnCategories.find(c => c.id === catId);
   if (!cat) return;
 
@@ -7225,6 +7391,7 @@ function startDragNote(event, noteId) {
 }
 
 async function dropNoteOnDate(event, dateStr) {
+  if (demoGuard()) return;
   event.preventDefault();
   const noteId = event.dataTransfer.getData('text/plain') || vnDragNoteId;
   if (!noteId) return;
@@ -7367,6 +7534,7 @@ function selectVnColor(el) {
 }
 
 async function saveCategory() {
+  if (demoGuard()) return;
   const catId = document.getElementById('vnCatEditId').value;
   const name = document.getElementById('vnCatEditName').value.trim();
   if (!name) { toast('Category name is required'); return; }
@@ -7397,6 +7565,7 @@ async function saveCategory() {
 }
 
 async function deleteCategoryFromColumn(catId) {
+  if (demoGuard()) return;
   const cat = vnCategories.find(c => c.id === catId);
   if (!cat) return;
   if (!confirm('Delete "' + cat.name + '"? Notes in it will become uncategorized.')) return;
@@ -7414,6 +7583,7 @@ async function deleteCategoryFromColumn(catId) {
 }
 
 async function deleteCategory() {
+  if (demoGuard()) return;
   const catId = document.getElementById('vnCatEditId').value;
   if (!catId || !confirm('Delete this category? Notes in it will become uncategorized.')) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
@@ -7659,6 +7829,7 @@ function cancelSettingsEdit() {
 }
 
 async function saveOrahSettings() {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
   const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
@@ -7907,6 +8078,7 @@ async function saveTransportDraft() {
 }
 
 async function submitTransportRequest() {
+  if (demoGuard()) return;
   await submitOrSaveTransport('submitted');
 }
 
@@ -8186,6 +8358,7 @@ function viewTransportRequest(trId) {
 }
 
 async function deleteTransportRequest(trId) {
+  if (demoGuard()) return;
   if (!confirm('Delete this transport request? This will also remove the linked to-do item.')) return;
   const token = currentSession?.access_token || SUPABASE_ANON;
   const headers = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
@@ -8536,6 +8709,7 @@ async function auditFetchAll(endpoint, bodyFn) {
 // ── Connection test ───────────────────────────────────
 
 async function auditTestConnection() {
+  if (demoGuard()) return;
   const key = document.getElementById('auditApiKey').value.trim();
   const region = document.getElementById('auditRegion').value;
   if (!key) { toast('Paste your Orah API key first'); return; }
@@ -8558,6 +8732,7 @@ async function auditTestConnection() {
 // ── Main audit flow ───────────────────────────────────
 
 async function auditRun() {
+  if (demoGuard()) return;
   const key = document.getElementById('auditApiKey').value.trim();
   const region = document.getElementById('auditRegion').value;
   if (!key) { toast('Paste your Orah API key first'); return; }
