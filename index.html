@@ -1797,9 +1797,9 @@ body {
     <div class="tab-bar">
       <button class="tab active" id="tabLinks" onclick="switchTab('links')">QR Codes</button>
       <button class="tab" id="tabAnalytics" onclick="switchTab('analytics')">Analytics</button>
-      <button class="tab" id="tabVoicenotes" onclick="switchTab('voicenotes')">To-Do</button>
       <button class="tab" id="tabVoicetype" onclick="switchTab('voicetype')">Download</button>
       <!-- Hidden tabs — features moved to other projects -->
+      <button class="tab" id="tabVoicenotes" onclick="switchTab('voicenotes')" style="display:none">To-Do</button>
       <button class="tab" id="tabCampaigns" onclick="switchTab('campaigns')" style="display:none">Campaigns</button>
       <button class="tab" id="tabAudit" onclick="switchTab('audit')" style="display:none">Audit</button>
     </div>
@@ -2118,23 +2118,25 @@ body {
         </div>
 
         <!-- ═══ SETTINGS PANEL ═══ -->
-        <!-- ═══ API KEYS PANEL ═══ -->
         <div class="vt-panel" id="vtPanelSettings">
           <div class="vt-card">
             <h4>Transcription Mode</h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">
+              The desktop app can transcribe entirely on your device — no API key needed. Only switch to Cloud if you don't have the desktop app installed.
+            </p>
             <div class="vt-field">
               <label>Processing</label>
               <select id="vtTranscriptionMode" onchange="onVtModeChange()">
+                <option value="local">Local (Desktop) — On-device via WhisperFlow, free &amp; private</option>
                 <option value="cloud">Cloud — OpenAI Whisper API (requires API key)</option>
-                <option value="local">Local — On-device (free, no data leaves machine)</option>
               </select>
               <div id="vtModeHint" class="vt-hint"></div>
             </div>
           </div>
 
-          <div class="vt-card" id="vtApiKeyCard">
-            <h4>OpenAI API Key</h4>
-            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Required for cloud transcription (Whisper). Not needed if using local mode.</p>
+          <div class="vt-card" id="vtApiKeyCard" style="display:none">
+            <h4>OpenAI API Key <span style="font-size:0.78rem;font-weight:400;color:var(--text-muted)">(Cloud mode only)</span></h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Only required if you selected Cloud mode above. Not needed for desktop/local transcription.</p>
             <div class="vt-field">
               <label>API Key</label>
               <div class="vt-api-key-wrap">
@@ -2147,8 +2149,8 @@ body {
           </div>
 
           <div class="vt-card" id="vtAnthropicCard">
-            <h4>Anthropic API Key (Claude)</h4>
-            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Powers AI formatting skills and auto-categorization of voice notes.</p>
+            <h4>Anthropic API Key <span style="font-size:0.78rem;font-weight:400;color:var(--text-muted)">(optional — AI prompt formatting)</span></h4>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Only needed if you use the AI prompt/formatting skills feature. Transcription works without it.</p>
             <div class="vt-field">
               <label>API Key</label>
               <div class="vt-api-key-wrap">
@@ -5375,31 +5377,30 @@ async function loadVtSettings() {
     }
   } catch (e) { console.error('VoiceType settings load error:', e); vtSettings = null; }
 
-  if (vtSettings && (vtSettings.openai_api_key || vtSettings.hotkey || vtSettings.transcription_mode)) {
+  const mode = vtSettings?.transcription_mode || 'local';
+  if (vtSettings) {
     document.getElementById('vtApiKey').value = vtSettings.openai_api_key || '';
     document.getElementById('vtHotkey').value = vtSettings.hotkey || 'CommandOrControl+Shift+Space';
     document.getElementById('vtLanguage').value = vtSettings.language || 'en';
     document.getElementById('vtAutoSubmit').checked = !!vtSettings.auto_submit;
-    document.getElementById('vtTranscriptionMode').value = vtSettings.transcription_mode || 'cloud';
+    document.getElementById('vtTranscriptionMode').value = mode;
     document.getElementById('vtAnthropicKey').value = vtSettings.anthropic_api_key || '';
     document.getElementById('vtAnthropicBaseUrl').value = vtSettings.anthropic_base_url || '';
-    const isLocal = vtSettings.transcription_mode === 'local';
-    const isActive = isLocal || vtSettings.openai_api_key;
-    document.getElementById('vtStatus').textContent = isLocal ? 'Local mode' : (vtSettings.openai_api_key ? 'Ready' : 'No API key');
-    const dot = document.getElementById('vtStatusDot');
-    if (dot) { dot.className = 'vt-status-dot' + (isActive ? ' active' : ''); }
   } else {
     document.getElementById('vtApiKey').value = '';
     document.getElementById('vtHotkey').value = 'CommandOrControl+Shift+Space';
     document.getElementById('vtLanguage').value = 'en';
     document.getElementById('vtAutoSubmit').checked = false;
-    document.getElementById('vtTranscriptionMode').value = 'cloud';
+    document.getElementById('vtTranscriptionMode').value = 'local';
     document.getElementById('vtAnthropicKey').value = '';
     document.getElementById('vtAnthropicBaseUrl').value = '';
-    document.getElementById('vtStatus').textContent = 'Not configured';
-    const dot = document.getElementById('vtStatusDot');
-    if (dot) { dot.className = 'vt-status-dot'; }
   }
+  const isLocal = mode === 'local';
+  const hasCloudKey = vtSettings?.openai_api_key;
+  const isReady = isLocal || hasCloudKey;
+  document.getElementById('vtStatus').textContent = isLocal ? 'Local (Desktop)' : (hasCloudKey ? 'Cloud — Ready' : 'Cloud — No API key');
+  const dot = document.getElementById('vtStatusDot');
+  if (dot) { dot.className = 'vt-status-dot' + (isReady ? ' active' : ''); }
   onVtModeChange();
 
   // Populate Orah fields in API Keys tab from orah_settings
@@ -5651,10 +5652,10 @@ function onVtModeChange() {
   const hint = document.getElementById('vtModeHint');
   if (mode === 'local') {
     apiKeyCard.style.display = 'none';
-    hint.innerHTML = '<strong style="color:#1A7A6D">HIPAA-safe:</strong> Audio is processed entirely on-device using a local Whisper model (~150 MB download on first use). No audio data is sent to any server. Requires the desktop app.';
+    hint.innerHTML = '<strong style="color:#1A7A6D">No API key needed.</strong> Audio stays on your device via the desktop app. Download the app below to get started.';
   } else {
     apiKeyCard.style.display = '';
-    hint.textContent = 'Audio is sent to OpenAI\'s Whisper API for transcription. Requires an API key.';
+    hint.textContent = 'Audio is sent to OpenAI\'s Whisper API. Requires an OpenAI API key.';
   }
 }
 

@@ -1680,18 +1680,18 @@ async function onHotkeyUp() {
       return; // Too short, ignore
     }
 
-    const mode = settings?.transcription_mode || store.get('transcription_mode') || 'cloud';
+    const mode = settings?.transcription_mode || store.get('transcription_mode') || 'local';
     const apiKey = settings?.openai_api_key || store.get('openai_api_key');
 
-    if (mode !== 'local' && mode !== 'groq' && !apiKey) {
+    if (mode === 'cloud' && !apiKey) {
       hideIndicator();
-      updateTrayMenu('No API key');
-      console.error('No OpenAI API key configured');
+      updateTrayMenu('No API key — switch to Local in settings');
+      console.error('Cloud mode requires an OpenAI API key. Switch to Local mode in LinkBoard settings.');
       return;
     }
 
     if (mode === 'local') {
-      showIndicator('Local transcription...', { processing: true });
+      showIndicator('Transcribing...', { processing: true });
     } else if (mode === 'groq') {
       showIndicator('Groq transcription...', { processing: true });
     }

@@ -42,23 +42,30 @@ module.exports = async (req, res) => {
   }
   if (!user || !user.id) return res.status(401).json({ error: 'Unauthorized' });
 
-  // Get user's OpenAI API key from settings
+  // Get user's settings — need API key for cloud mode
   const apikey = SERVICE_KEY || token;
   let openaiKey;
+  let transcriptionMode = 'local';
   try {
     const r = await fetch(
-      SUPABASE_URL + '/rest/v1/voicetype_settings?user_id=eq.' + user.id + '&select=openai_api_key&limit=1',
+      SUPABASE_URL + '/rest/v1/voicetype_settings?user_id=eq.' + user.id + '&select=openai_api_key,transcription_mode&limit=1',
       { headers: { 'apikey': apikey, 'Authorization': 'Bearer ' + apikey } }
     );
     if (!r.ok) return res.status(500).json({ error: 'Failed to fetch settings' });
     const rows = await r.json();
     openaiKey = decrypt(rows[0]?.openai_api_key || '');
+    transcriptionMode = rows[0]?.transcription_mode || 'local';
   } catch (e) {
     return res.status(500).json({ error: 'Failed to fetch API key' });
   }
 
+  // Local mode uses the desktop app — this proxy is only needed for cloud mode
   if (!openaiKey) {
-    return res.status(400).json({ error: 'No OpenAI API key configured. Set it in LinkBoard > VoiceType > Settings.' });
+    return res.status(400).json({
+      error: transcriptionMode === 'local'
+        ? 'Local mode uses the desktop app — no API key needed. Download VoiceType at las-link-board.vercel.app.'
+        : 'No OpenAI API key configured. Add one in LinkBoard → Download → Settings, or switch to Local mode.'
+    });
   }
 
   // Parse audio from request body
