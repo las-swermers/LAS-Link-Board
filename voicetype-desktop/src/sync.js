@@ -174,7 +174,7 @@ function getCachedSettings(store) {
     language: 'en',
     auto_submit: false,
     openai_api_key: '',
-    transcription_mode: 'cloud',
+    transcription_mode: 'local',
     soap_notes: false,
     active_skill_id: null,
     anthropic_api_key: '',
